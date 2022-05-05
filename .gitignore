@@ -1,0 +1,6 @@
+.cache
+*.csv
+results/
+resources/
+to_grafana/
+venv/
