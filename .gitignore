@@ -4,3 +4,4 @@ results/
 resources/
 to_grafana/
 venv/
+config.json
