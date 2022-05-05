@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import pandas as pd
 import numpy as np
@@ -85,96 +86,182 @@ headers = {'Authorization': 'Bearer {token}'.format(token=access_token)}
 BASE_URL = 'https://api.spotify.com/v1/'
 dict_all = {}
 
+def chunks_list(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+def chunks_iter(iterable, n):
+    """Yield successive n-sized chunks from iter."""
+    iterable = iter(iterable)
+    while True:
+        chunk = []
+        try:
+            for _ in range(n):
+                chunk.append(next(iterable))
+            yield chunk
+        except StopIteration:
+            if chunk:
+                yield chunk
+            break
+
 def do_spotify_request(url, headers, params = None):
-    if params:
-        r = requests.get(url, headers=headers, params = params)
-    else:
-        r = requests.get(url, headers=headers)
-    r.raise_for_status()
-    return r.json()
+    try:
+        if params:
+            response = requests.get(url, headers=headers, params = params)
+        else:
+            response = requests.get(url, headers=headers)
+        print(f' -> {response.request.url}')
+        print(f" <- {response.status_code} {response.text[:200].replace(' ', '').encode('UTF-8')}")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        print(f"WARNING - HTTPError - {err}")
+        time.sleep(5)
+        return do_spotify_request(url, headers, params)
+    except Exception as err:
+        print(f"ERROR - Exception - {err}")
+        exit(1)
+
+def get_track_uri(track_name, artist_name):
+    params = [
+        ('q', 'columbine' + ' track:' + 'enfant terrible'.replace('\'', ' ')),
+        ('type', 'track'),
+        ('market', 'FR'),
+        ('limit', '1'),
+        ('offset', '0')
+    ]
+    response = do_spotify_request(BASE_URL + 'search/', headers=headers, params=params)
+    track = response['tracks']['items'][0]
+    track_uri = track['uri'].split(':')[2]
+    #a_uri = result_track['artists'][0]['uri'].split(':')[2]
+    #track_popularity = result_track.get('popularity', None)
+    #track_duration_ms = result_track.get('duration_ms', None)
+    return track_uri
+
+def get_artist_uris(track_uris: list):
+    params = [
+        ('ids', ','.join(track_uris)),
+        ('type', 'track'),
+        ('market', 'FR')
+    ]
+    response = do_spotify_request(BASE_URL + 'tracks/', headers=headers, params=params)
+    tracks = response['tracks']
+    artist_uris = [artists['artists'][0]['uri'].split(':')[2] for artists in tracks]
+    return artist_uris
+
+def get_artist_data(artist_uris: list):
+    params = [
+        ('ids', ','.join(artist_uris)),
+        ('type', 'track'),
+        ('market', 'FR')
+    ]
+    response = do_spotify_request(BASE_URL + 'artists/', headers=headers, params=params)
+    artists = response['artists']
+    artist_genres = [artist.get('genres', None) for artist in artists]
+    artist_popularity = [artist.get('popularity', None) for artist in artists]
+    return artist_genres, artist_popularity
+
+def get_track_data(track_uris: list):
+    params = [
+        ('ids', ','.join(track_uris)),
+        ('type', 'track'),
+        ('market', 'FR')
+    ]
+    response = do_spotify_request(BASE_URL + 'tracks/', headers=headers, params=params)
+    tracks = response['tracks']
+    track_durations_ms = [track.get('duration_ms', None) for track in tracks]
+    track_popularity = [track.get('popularity', None) for track in tracks]
+    return track_durations_ms, track_popularity
+
+def get_track_audio_features(track_uris: list):
+    params = [
+        ('ids', ','.join(track_uris)),
+        ('type', 'track'),
+        ('market', 'FR')
+    ]
+    response = do_spotify_request(BASE_URL + 'audio-features/', headers=headers, params=params)
+    return [{
+        'danceability': track_af.get('danceability', None),
+        'energy': track_af.get('energy', None),
+        'key': track_af.get('key', None),
+        'loudness': track_af.get('loudness', None),
+        'mode': track_af.get('mode', None),
+        'speechiness': track_af.get('speechiness', None),
+        'acousticness': track_af.get('acousticness', None),
+        'instrumentalness': track_af.get('instrumentalness', None),
+        'liveness': track_af.get('liveness', None),
+        'valence': track_af.get('valence', None),
+        'tempo': track_af.get('tempo', None)
+    } for track_af in response['audio_features']]
+
+def enrich_track_uri(row):
+    index = row[0]
+    stream = row[1]
+    track_uri = stream['track_uri']
+    track_name = stream['trackName']
+    artist_name = stream['artistName']
+
+    print(f'INFO - enrich track uri n°{index} ({track_uri})')
+
+    # if track uri is nan
+    if type(track_uri) is float:
+        row[1]['track_uri'] = get_track_uri(track_name, artist_name)
+    
+    return row
+
+def enrich_artist_uri(rows):
+    print(f'INFO - enrich artist uri')
+    artist_uris = get_artist_uris([row[1]['track_uri'] for row in rows])
+
+    for i in range(50):
+        rows[i][1]['artist_uri'] = artist_uris[i]
+
+    return rows
+
+def enrich_track_data(rows):
+    print(f'INFO - enrich track data')
+    track_durations_ms, track_popularity = get_track_data([row[1]['track_uri'] for row in rows])
+
+    for i in range(50):
+        rows[i][1]['track_duration_ms'] = track_durations_ms[i]
+        rows[i][1]['track_popularity'] = track_popularity[i]
+
+    return rows
+
+def enrich_artist_data(rows):
+    print(f'INFO - enrich artist data')
+    artist_genres, artist_popularity = get_artist_data([row[1]['artist_uri'] for row in rows])
+
+    for i in range(50):
+        rows[i][1]['artist_genres'] = artist_genres[i]
+        rows[i][1]['artist_popularity'] = artist_popularity[i]
+
+    return rows
+
+def enrich_track_audio_features(rows):
+    print(f'INFO - enrich audio features')
+    track_af = get_track_audio_features([row[1]['track_uri'] for row in rows])
+
+    for i in range(50):
+        rows[i][1]['audio_features'] = track_af[i]
+
+    return rows
 
 df_tableau = df_tableau.reset_index()
-for row in df_tableau.iterrows():
-    try:
-        index = row[0]
-        stream = row[1]
-        t_uri = stream['track_uri']
-        track_name = stream['trackName']
-        artist_name = stream['artistName']
+for rows in chunks_iter(df_tableau.iterrows(), 50):
 
-        # if uri is nan
-        if type(t_uri) is float:
-            params = [
-                ('q', artist_name + ' track:' + track_name.replace('\'', ' ')),
-                ('type', 'track'),
-                ('market', 'FR'),
-                ('limit', '1'),
-                ('offset', '0')
-                ]
-            g = do_spotify_request(BASE_URL + 'search/', headers = headers, params = params)
-            result_track = g['tracks']['items'][0]
+    rows = list(map(enrich_track_uri, rows))
+    rows = enrich_artist_uri(rows)
+    rows = enrich_artist_data(rows)
+    rows = enrich_track_data(rows)
+    rows = enrich_track_audio_features(rows)
 
-            t_uri = result_track['uri'].split(':')[2]
-            a_uri = result_track['artists'][0]['uri'].split(':')[2]
-            track_popularity = result_track.get('popularity', None)
-            track_duration_ms = result_track.get('duration_ms', None)
-        else:
-            r = do_spotify_request(BASE_URL + 'tracks/' + t_uri, headers = headers, params = params)
-            a_uri = r['artists'][0]['uri'].split(':')[2]
-            track_popularity = r.get('popularity', None)
-            track_duration_ms = r.get('duration_ms', None)
-
-        s = do_spotify_request(BASE_URL + 'artists/' + a_uri, headers = headers)
-        artist_genres = s.get('genres', None)
-        artist_popularity = s.get('popularity', None)
-
-        f = do_spotify_request(BASE_URL + 'audio-features/' + t_uri, headers = headers)
-        track_features = {
-            'danceability': f.get('danceability', None),
-            'energy': f.get('energy', None),
-            'key': f.get('key', None),
-            'loudness': f.get('loudness', None),
-            'mode': f.get('mode', None),
-            'speechiness': f.get('speechiness', None),
-            'acousticness': f.get('acousticness', None),
-            'instrumentalness': f.get('instrumentalness', None),
-            'liveness': f.get('liveness', None),
-            'valence': f.get('valence', None),
-            'tempo': f.get('tempo', None)
-        }
-        
-        dict_all[index] = {
-            'end_time': stream['endTime'],
-            'ms_played': stream['msPlayed'],
-            'track': {
-                'name': stream['trackName'],
-                'uri': t_uri,
-                'popularity': track_popularity,
-                'duration': track_duration_ms,
-                'features': track_features
-            }, 
-            #? todo all artitS
-            'artist': {
-                'name': stream['artistName'],
-                'uri': a_uri,
-                'popularity': artist_popularity,
-                'genres': artist_genres
-            },
-            'album': {
-                'name': stream['album']
-            },
-            'in_library': stream['In Library']
-        }
-
-    except requests.exceptions.HTTPError as err:
-        print(f"WARN - HTTPError {index} - {err}")
-        break
-    except Exception as err:
-        print(f"WARN - Exception {index} - {err}")
+    for row in rows:
+        dict_all[row[0]] = row[1]
 
 dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
 dict_all.reset_index(inplace=True, drop=True)
-
 dict_all.head()
 
 ##
@@ -182,6 +269,6 @@ dict_all.head()
 if not os.path.exists(results_folder):
     os.mkdir(results_folder)
 
-dict_all.to_csv(results_folder + '/NewAllTable.csv')
+dict_all.to_csv(results_folder + '/v2.csv')
 
 print('done')
