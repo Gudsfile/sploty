@@ -1,4 +1,5 @@
 import json
+import glob
 import os
 import time
 
@@ -6,69 +7,17 @@ import pandas as pd
 import numpy as np
 import requests
 
-# https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html
-# https://towardsdatascience.com/get-your-spotify-streaming-history-with-python-d5a208bbcbd3
 
-index = '3'
+INDEX = '3'
 
-last_resources_folder = 'resources/my_spotify_data_' + index
-results_folder = 'results/my_spotify_data_' + index
+RESOURCES_FOLDER = 'resources/my_spotify_data_'
+LAST_RESOURCES_FOLDER = 'resources/my_spotify_data_' + INDEX
+RESULTS_FOLDER = 'results/my_spotify_data_' + INDEX
 
-config_filde = 'config.json'
+CONFIG_FILE = 'config.json'
+CONFIG = json.load(open(CONFIG_FILE, 'r', encoding='UTF-8'))
 
-##
-
-resources_folder = 'resources/my_spotify_data_'
-
-df_stream10 = pd.read_json(resources_folder + '1/StreamingHistory0.json')
-df_stream11 = pd.read_json(resources_folder + '1/StreamingHistory1.json')
-df_stream12 = pd.read_json(resources_folder + '1/StreamingHistory2.json')
-
-df_stream20 = pd.read_json(resources_folder + '2/StreamingHistory0.json')
-df_stream21 = pd.read_json(resources_folder + '2/StreamingHistory1.json')
-df_stream22 = pd.read_json(resources_folder + '2/StreamingHistory2.json')
-
-df_stream30 = pd.read_json(resources_folder + '3/StreamingHistory0.json')
-df_stream31 = pd.read_json(resources_folder + '3/StreamingHistory1.json')
-df_stream32 = pd.read_json(resources_folder + '3/StreamingHistory2.json')
-df_stream33 = pd.read_json(resources_folder + '3/StreamingHistory3.json')
-
-df_stream1 = pd.concat([df_stream10, df_stream11, df_stream12])
-df_stream2 = pd.concat([df_stream20, df_stream21, df_stream22])
-df_stream3 = pd.concat([df_stream30, df_stream31, df_stream32, df_stream33])
-
-df_stream = pd.concat([df_stream1, df_stream2, df_stream3])
-
-df_stream = df_stream.drop_duplicates()
-
-df_stream['UniqueID'] = df_stream['artistName'] + ':' + df_stream['trackName']
-
-df_stream.head()
-
-##
-
-df_library = pd.read_json(last_resources_folder + '/YourLibrary_tracks.json')
-
-df_library['UniqueID'] = df_library['artist'] + ":" + df_library['track']
-
-new = df_library["uri"].str.split(":", expand = True)
-df_library['track_uri'] = new[2]
-
-df_library.head()
-
-##
-
-df_tableau = df_stream.copy()
-
-df_tableau['In Library'] = np.where(df_tableau['UniqueID'].isin(df_library['UniqueID'].tolist()),1,0)
-
-df_tableau = pd.merge(df_tableau, df_library[['album','UniqueID','track_uri']],how='left',on=['UniqueID'])
-
-df_tableau.head()
-
-##
-
-CONFIG = json.load(open(config_filde, 'r'))
+# Spotify Authentication
 AUTH_URL = CONFIG['AUTH_URL']
 SPOTIFY_CLIENT_ID = CONFIG['SPOTIFY_CLIENT_ID']
 SPOTIFY_CLIENT_SECRET = CONFIG['SPOTIFY_CLIENT_SECRET']
@@ -80,24 +29,26 @@ auth_response = requests.post(AUTH_URL, {
 })
 auth_response_data = auth_response.json()
 
-access_token = auth_response_data['access_token']
+ACCESS_TOKEN = auth_response_data['access_token']
 
-headers = {'Authorization': 'Bearer {token}'.format(token=access_token)}
+# Spotify bases
+HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
 BASE_URL = 'https://api.spotify.com/v1/'
-dict_all = {}
 
-def chunks_list(lst, n):
+
+def chunks_list(lst, chunk_size):
     """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
 
-def chunks_iter(iterable, n):
+
+def chunks_iter(iterable, chunk_size):
     """Yield successive n-sized chunks from iter."""
     iterable = iter(iterable)
     while True:
         chunk = []
         try:
-            for _ in range(n):
+            for _ in range(chunk_size):
                 chunk.append(next(iterable))
             yield chunk
         except StopIteration:
@@ -105,10 +56,11 @@ def chunks_iter(iterable, n):
                 yield chunk
             break
 
-def do_spotify_request(url, headers, params = None):
+
+def do_spotify_request(url, headers, params=None):
     try:
         if params:
-            response = requests.get(url, headers=headers, params = params)
+            response = requests.get(url, headers=headers, params=params)
         else:
             response = requests.get(url, headers=headers)
         print(f' -> {response.request.url}')
@@ -119,25 +71,24 @@ def do_spotify_request(url, headers, params = None):
         print(f"WARNING - HTTPError - {err}")
         time.sleep(5)
         return do_spotify_request(url, headers, params)
-    except Exception as err:
-        print(f"ERROR - Exception - {err}")
-        exit(1)
+
 
 def get_track_uri(track_name, artist_name):
     params = [
-        ('q', 'columbine' + ' track:' + 'enfant terrible'.replace('\'', ' ')),
+        ('q', artist_name + ' track:' + track_name.replace('\'', ' ')),
         ('type', 'track'),
         ('market', 'FR'),
         ('limit', '1'),
         ('offset', '0')
     ]
-    response = do_spotify_request(BASE_URL + 'search/', headers=headers, params=params)
+    response = do_spotify_request(BASE_URL + 'search/', headers=HEADERS, params=params)
     track = response['tracks']['items'][0]
     track_uri = track['uri'].split(':')[2]
-    #a_uri = result_track['artists'][0]['uri'].split(':')[2]
-    #track_popularity = result_track.get('popularity', None)
-    #track_duration_ms = result_track.get('duration_ms', None)
+    # a_uri = result_track['artists'][0]['uri'].split(':')[2]
+    # track_popularity = result_track.get('popularity', None)
+    # track_duration_ms = result_track.get('duration_ms', None)
     return track_uri
+
 
 def get_artist_uris(track_uris: list):
     params = [
@@ -145,10 +96,11 @@ def get_artist_uris(track_uris: list):
         ('type', 'track'),
         ('market', 'FR')
     ]
-    response = do_spotify_request(BASE_URL + 'tracks/', headers=headers, params=params)
+    response = do_spotify_request(BASE_URL + 'tracks/', headers=HEADERS, params=params)
     tracks = response['tracks']
     artist_uris = [artists['artists'][0]['uri'].split(':')[2] for artists in tracks]
     return artist_uris
+
 
 def get_artist_data(artist_uris: list):
     params = [
@@ -156,11 +108,12 @@ def get_artist_data(artist_uris: list):
         ('type', 'track'),
         ('market', 'FR')
     ]
-    response = do_spotify_request(BASE_URL + 'artists/', headers=headers, params=params)
+    response = do_spotify_request(BASE_URL + 'artists/', headers=HEADERS, params=params)
     artists = response['artists']
     artist_genres = [artist.get('genres', None) for artist in artists]
     artist_popularity = [artist.get('popularity', None) for artist in artists]
     return artist_genres, artist_popularity
+
 
 def get_track_data(track_uris: list):
     params = [
@@ -168,11 +121,12 @@ def get_track_data(track_uris: list):
         ('type', 'track'),
         ('market', 'FR')
     ]
-    response = do_spotify_request(BASE_URL + 'tracks/', headers=headers, params=params)
+    response = do_spotify_request(BASE_URL + 'tracks/', headers=HEADERS, params=params)
     tracks = response['tracks']
     track_durations_ms = [track.get('duration_ms', None) for track in tracks]
     track_popularity = [track.get('popularity', None) for track in tracks]
     return track_durations_ms, track_popularity
+
 
 def get_track_audio_features(track_uris: list):
     params = [
@@ -180,7 +134,7 @@ def get_track_audio_features(track_uris: list):
         ('type', 'track'),
         ('market', 'FR')
     ]
-    response = do_spotify_request(BASE_URL + 'audio-features/', headers=headers, params=params)
+    response = do_spotify_request(BASE_URL + 'audio-features/', headers=HEADERS, params=params)
     return [{
         'danceability': track_af.get('danceability', None),
         'energy': track_af.get('energy', None),
@@ -195,6 +149,7 @@ def get_track_audio_features(track_uris: list):
         'tempo': track_af.get('tempo', None)
     } for track_af in response['audio_features']]
 
+
 def enrich_track_uri(row):
     index = row[0]
     stream = row[1]
@@ -205,13 +160,14 @@ def enrich_track_uri(row):
     print(f'INFO - enrich track uri n°{index} ({track_uri})')
 
     # if track uri is nan
-    if type(track_uri) is float:
+    if isinstance(track_uri, float):
         row[1]['track_uri'] = get_track_uri(track_name, artist_name)
-    
+
     return row
 
+
 def enrich_artist_uri(rows):
-    print(f'INFO - enrich artist uri')
+    print('INFO - enrich artist uri')
     artist_uris = get_artist_uris([row[1]['track_uri'] for row in rows])
 
     for i in range(50):
@@ -219,8 +175,9 @@ def enrich_artist_uri(rows):
 
     return rows
 
+
 def enrich_track_data(rows):
-    print(f'INFO - enrich track data')
+    print('INFO - enrich track data')
     track_durations_ms, track_popularity = get_track_data([row[1]['track_uri'] for row in rows])
 
     for i in range(50):
@@ -229,8 +186,9 @@ def enrich_track_data(rows):
 
     return rows
 
+
 def enrich_artist_data(rows):
-    print(f'INFO - enrich artist data')
+    print('INFO - enrich artist data')
     artist_genres, artist_popularity = get_artist_data([row[1]['artist_uri'] for row in rows])
 
     for i in range(50):
@@ -239,8 +197,9 @@ def enrich_artist_data(rows):
 
     return rows
 
+
 def enrich_track_audio_features(rows):
-    print(f'INFO - enrich audio features')
+    print('INFO - enrich audio features')
     track_af = get_track_audio_features([row[1]['track_uri'] for row in rows])
 
     for i in range(50):
@@ -248,27 +207,56 @@ def enrich_track_audio_features(rows):
 
     return rows
 
-df_tableau = df_tableau.reset_index()
-for rows in chunks_iter(df_tableau.iterrows(), 50):
 
-    rows = list(map(enrich_track_uri, rows))
-    rows = enrich_artist_uri(rows)
-    rows = enrich_artist_data(rows)
-    rows = enrich_track_data(rows)
-    rows = enrich_track_audio_features(rows)
+def app():
+    resources_files = [f for f in glob.glob(RESOURCES_FOLDER + '*/StreamingHistory*.json')]
+    df_stream = pd.concat(map(pd.read_json, resources_files)).drop_duplicates()
 
-    for row in rows:
-        dict_all[row[0]] = row[1]
+    df_stream['UniqueID'] = df_stream['artistName'] + ':' + df_stream['trackName']
 
-dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
-dict_all.reset_index(inplace=True, drop=True)
-dict_all.head()
+    ##
 
-##
+    df_library = pd.read_json(LAST_RESOURCES_FOLDER + '/YourLibrary_tracks.json')
 
-if not os.path.exists(results_folder):
-    os.mkdir(results_folder)
+    df_library['UniqueID'] = df_library['artist'] + ":" + df_library['track']
 
-dict_all.to_csv(results_folder + '/v2.csv')
+    new = df_library["uri"].str.split(":", expand=True)
+    df_library['track_uri'] = new[2]
 
-print('done')
+    ##
+
+    df_tableau = df_stream.copy()
+
+    df_tableau['In Library'] = np.where(df_tableau['UniqueID'].isin(df_library['UniqueID'].tolist()), 1, 0)
+
+    df_tableau = pd.merge(df_tableau, df_library[['album', 'UniqueID', 'track_uri']], how='left', on=['UniqueID'])
+
+    dict_all = {}
+
+    df_tableau = df_tableau.reset_index()
+    for rows in chunks_iter(df_tableau.iterrows(), 50):
+
+        rows = list(map(enrich_track_uri, rows))
+        rows = enrich_artist_uri(rows)
+        rows = enrich_artist_data(rows)
+        rows = enrich_track_data(rows)
+        rows = enrich_track_audio_features(rows)
+
+        for row in rows:
+            dict_all[row[0]] = row[1]
+
+    dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
+    dict_all.reset_index(inplace=True, drop=True)
+    dict_all.head()
+
+    ##
+
+    if not os.path.exists(RESULTS_FOLDER):
+        os.mkdir(RESULTS_FOLDER)
+
+    dict_all.to_csv(RESULTS_FOLDER + '/v2.csv')
+
+
+if __name__ == '__main__':
+    app()
+    print('done')
