@@ -67,39 +67,98 @@ access_token = auth_response_data['access_token']
 
 headers = {'Authorization': 'Bearer {token}'.format(token=access_token)}
 BASE_URL = 'https://api.spotify.com/v1/'
-dict_genre = {}
-track_uris = df_library['track_uri'].to_list()
+dict_all = {}
 
-for t_uri in track_uris:
+df_tableau = df_tableau.reset_index()
+for row in df_tableau.iterrows():
     try:
-        dict_genre[t_uri] = {'artist_uri': "", "genres":[]}
-        
-        r = requests.get(BASE_URL + 'tracks/' + t_uri, headers=headers)
-        r = r.json()
-        a_uri = r['artists'][0]['uri'].split(':')[2]
-        dict_genre[t_uri]['artist_uri'] = a_uri
-        
+        index = row[0]
+        stream = row[1]
+        t_uri = stream['track_uri']
+        track_name = stream['trackName']
+        artist_name = stream['artistName']
+
+        # if uri is nan
+        if type(t_uri) is float:
+            params = [
+                ('q', artist_name + ' track:' + track_name.replace('\'', ' ')),
+                ('type', 'track'),
+                ('market', 'FR'),
+                ('limit', '1'),
+                ('offset', '0')
+                ]
+            g = requests.get(BASE_URL + 'search/', headers=headers, params = params)
+            g = g.json()
+            result_track = g['tracks']['items'][0]
+
+            t_uri = result_track['uri'].split(':')[2]
+            a_uri = result_track['artists'][0]['uri'].split(':')[2]
+            track_popularity = result_track['popularity']
+            track_duration_ms = result_track['duration_ms']
+        else:
+            r = requests.get(BASE_URL + 'tracks/' + t_uri, headers=headers)
+            r = r.json()
+            a_uri = r['artists'][0]['uri'].split(':')[2]
+            track_popularity = r['popularity']
+            track_duration_ms = r['duration_ms']
+
         s = requests.get(BASE_URL + 'artists/' + a_uri, headers=headers)
         s = s.json()
-        dict_genre[t_uri]['genres'] = s['genres']
+        artist_genres = s['genres']
+        artist_popularity = s['popularity']
+
+        f = requests.get(BASE_URL + 'audio-features/' + t_uri, headers=headers)
+        f = f.json()
+        track_features = {
+            'danceability': f['danceability'],
+            'energy': f['energy'],
+            'key': f['key'],
+            'loudness': f['loudness'],
+            'mode': f['mode'],
+            'speechiness': f['speechiness'],
+            'acousticness': f['acousticness'],
+            'instrumentalness': f['instrumentalness'],
+            'liveness': f['liveness'],
+            'valence': f['valence'],
+            'tempo': f['tempo']          
+        }
+        
+        dict_all[index] = {
+            'end_time': stream['endTime'],
+            'ms_played': stream['msPlayed'],
+            'track': {
+                'name': stream['trackName'],
+                'uri': t_uri,
+                'popularity': track_popularity,
+                'duration': track_duration_ms,
+                'features': track_features
+            }, 
+            #? todo all artitS
+            'artist': {
+                'name': stream['artistName'],
+                'uri': a_uri,
+                'popularity': artist_popularity,
+                'genres': artist_genres
+            },
+            'album': {
+                'name': stream['album']
+            },
+            'in_library': stream['In Library']
+        }
+
     except Exception as err:
         print(f"WARN - {err}")
 
-df_genre = pd.DataFrame.from_dict(dict_genre, orient='index')
-df_genre.insert(0, 'track_uri', df_genre.index)
-df_genre.reset_index(inplace=True, drop=True)
+dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
+dict_all.reset_index(inplace=True, drop=True)
 
-df_genre.head()
-
-df_genre_expanded = df_genre.explode('genres')
-df_genre_expanded.head()
+dict_all.head()
 
 ##
 
 if not os.path.exists(results_folder):
     os.mkdir(results_folder)
 
-df_tableau.to_csv(results_folder + '/MySpotifyDataTable.csv')
-df_genre_expanded.to_csv(results_folder + '/GenresExpandedTable.csv')
+dict_all.to_csv(results_folder + '/NewAllTable.csv')
 
 print('done')
