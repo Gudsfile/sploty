@@ -10,19 +10,35 @@ import requests
 
 index = '3'
 
-resources_folder = 'resources/my_spotify_data_' + index
+last_resources_folder = 'resources/my_spotify_data_' + index
 results_folder = 'results/my_spotify_data_' + index
 
 config_filde = 'config.json'
 
 ##
 
-df_stream0 = pd.read_json(resources_folder + '/StreamingHistory0.json')
-df_stream1 = pd.read_json(resources_folder + '/StreamingHistory1.json')
-df_stream2 = pd.read_json(resources_folder + '/StreamingHistory2.json')
-df_stream3 = pd.read_json(resources_folder + '/StreamingHistory3.json')
+resources_folder = 'resources/my_spotify_data_'
 
-df_stream = pd.concat([df_stream0, df_stream1, df_stream2])
+df_stream10 = pd.read_json(resources_folder + '1/StreamingHistory0.json')
+df_stream11 = pd.read_json(resources_folder + '1/StreamingHistory1.json')
+df_stream12 = pd.read_json(resources_folder + '1/StreamingHistory2.json')
+
+df_stream20 = pd.read_json(resources_folder + '2/StreamingHistory0.json')
+df_stream21 = pd.read_json(resources_folder + '2/StreamingHistory1.json')
+df_stream22 = pd.read_json(resources_folder + '2/StreamingHistory2.json')
+
+df_stream30 = pd.read_json(resources_folder + '3/StreamingHistory0.json')
+df_stream31 = pd.read_json(resources_folder + '3/StreamingHistory1.json')
+df_stream32 = pd.read_json(resources_folder + '3/StreamingHistory2.json')
+df_stream33 = pd.read_json(resources_folder + '3/StreamingHistory3.json')
+
+df_stream1 = pd.concat([df_stream10, df_stream11, df_stream12])
+df_stream2 = pd.concat([df_stream20, df_stream21, df_stream22])
+df_stream3 = pd.concat([df_stream30, df_stream31, df_stream32, df_stream33])
+
+df_stream = pd.concat([df_stream1, df_stream2, df_stream3])
+
+df_stream = df_stream.drop_duplicates()
 
 df_stream['UniqueID'] = df_stream['artistName'] + ':' + df_stream['trackName']
 
@@ -30,7 +46,7 @@ df_stream.head()
 
 ##
 
-df_library = pd.read_json(resources_folder + '/YourLibrary_tracks.json')
+df_library = pd.read_json(last_resources_folder + '/YourLibrary_tracks.json')
 
 df_library['UniqueID'] = df_library['artist'] + ":" + df_library['track']
 
@@ -69,6 +85,14 @@ headers = {'Authorization': 'Bearer {token}'.format(token=access_token)}
 BASE_URL = 'https://api.spotify.com/v1/'
 dict_all = {}
 
+def do_spotify_request(url, headers, params = None):
+    if params:
+        r = requests.get(url, headers=headers, params = params)
+    else:
+        r = requests.get(url, headers=headers)
+    r.raise_for_status()
+    return r.json()
+
 df_tableau = df_tableau.reset_index()
 for row in df_tableau.iterrows():
     try:
@@ -87,40 +111,36 @@ for row in df_tableau.iterrows():
                 ('limit', '1'),
                 ('offset', '0')
                 ]
-            g = requests.get(BASE_URL + 'search/', headers=headers, params = params)
-            g = g.json()
+            g = do_spotify_request(BASE_URL + 'search/', headers = headers, params = params)
             result_track = g['tracks']['items'][0]
 
             t_uri = result_track['uri'].split(':')[2]
             a_uri = result_track['artists'][0]['uri'].split(':')[2]
-            track_popularity = result_track['popularity']
-            track_duration_ms = result_track['duration_ms']
+            track_popularity = result_track.get('popularity', None)
+            track_duration_ms = result_track.get('duration_ms', None)
         else:
-            r = requests.get(BASE_URL + 'tracks/' + t_uri, headers=headers)
-            r = r.json()
+            r = do_spotify_request(BASE_URL + 'tracks/' + t_uri, headers = headers, params = params)
             a_uri = r['artists'][0]['uri'].split(':')[2]
-            track_popularity = r['popularity']
-            track_duration_ms = r['duration_ms']
+            track_popularity = r.get('popularity', None)
+            track_duration_ms = r.get('duration_ms', None)
 
-        s = requests.get(BASE_URL + 'artists/' + a_uri, headers=headers)
-        s = s.json()
-        artist_genres = s['genres']
-        artist_popularity = s['popularity']
+        s = do_spotify_request(BASE_URL + 'artists/' + a_uri, headers = headers)
+        artist_genres = s.get('genres', None)
+        artist_popularity = s.get('popularity', None)
 
-        f = requests.get(BASE_URL + 'audio-features/' + t_uri, headers=headers)
-        f = f.json()
+        f = do_spotify_request(BASE_URL + 'audio-features/' + t_uri, headers = headers)
         track_features = {
-            'danceability': f['danceability'],
-            'energy': f['energy'],
-            'key': f['key'],
-            'loudness': f['loudness'],
-            'mode': f['mode'],
-            'speechiness': f['speechiness'],
-            'acousticness': f['acousticness'],
-            'instrumentalness': f['instrumentalness'],
-            'liveness': f['liveness'],
-            'valence': f['valence'],
-            'tempo': f['tempo']          
+            'danceability': f.get('danceability', None),
+            'energy': f.get('energy', None),
+            'key': f.get('key', None),
+            'loudness': f.get('loudness', None),
+            'mode': f.get('mode', None),
+            'speechiness': f.get('speechiness', None),
+            'acousticness': f.get('acousticness', None),
+            'instrumentalness': f.get('instrumentalness', None),
+            'liveness': f.get('liveness', None),
+            'valence': f.get('valence', None),
+            'tempo': f.get('tempo', None)
         }
         
         dict_all[index] = {
@@ -146,8 +166,11 @@ for row in df_tableau.iterrows():
             'in_library': stream['In Library']
         }
 
+    except requests.exceptions.HTTPError as err:
+        print(f"WARN - HTTPError {index} - {err}")
+        break
     except Exception as err:
-        print(f"WARN - {err}")
+        print(f"WARN - Exception {index} - {err}")
 
 dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
 dict_all.reset_index(inplace=True, drop=True)
