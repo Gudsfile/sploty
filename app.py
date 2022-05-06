@@ -82,8 +82,13 @@ def get_track_uri(track_name, artist_name):
         ('offset', '0')
     ]
     response = do_spotify_request(BASE_URL + 'search/', headers=HEADERS, params=params)
-    track = response['tracks']['items'][0]
-    track_uri = track['uri'].split(':')[2]
+    try:
+        track = response['tracks']['items'][0]
+        track_uri = track['uri'].split(':')[2]
+    except IndexError as err:
+        print(f"WARNING - IndexError - {err}")
+        track_uri = None
+
     # a_uri = result_track['artists'][0]['uri'].split(':')[2]
     # track_popularity = result_track.get('popularity', None)
     # track_duration_ms = result_track.get('duration_ms', None)
@@ -98,7 +103,7 @@ def get_artist_uris(track_uris: list):
     ]
     response = do_spotify_request(BASE_URL + 'tracks/', headers=HEADERS, params=params)
     tracks = response['tracks']
-    artist_uris = [artists['artists'][0]['uri'].split(':')[2] for artists in tracks]
+    artist_uris = [artists['artists'][0]['uri'].split(':')[2] if artists else None for artists in tracks]
     return artist_uris
 
 
@@ -110,8 +115,8 @@ def get_artist_data(artist_uris: list):
     ]
     response = do_spotify_request(BASE_URL + 'artists/', headers=HEADERS, params=params)
     artists = response['artists']
-    artist_genres = [artist.get('genres', None) for artist in artists]
-    artist_popularity = [artist.get('popularity', None) for artist in artists]
+    artist_genres = [artist.get('genres', None) if artist else [] for artist in artists]
+    artist_popularity = [artist.get('popularity', None) if artist else None for artist in artists]
     return artist_genres, artist_popularity
 
 
@@ -123,8 +128,8 @@ def get_track_data(track_uris: list):
     ]
     response = do_spotify_request(BASE_URL + 'tracks/', headers=HEADERS, params=params)
     tracks = response['tracks']
-    track_durations_ms = [track.get('duration_ms', None) for track in tracks]
-    track_popularity = [track.get('popularity', None) for track in tracks]
+    track_durations_ms = [track.get('duration_ms', None) if track else None for track in tracks]
+    track_popularity = [track.get('popularity', None) if track else None for track in tracks]
     return track_durations_ms, track_popularity
 
 
@@ -136,17 +141,17 @@ def get_track_audio_features(track_uris: list):
     ]
     response = do_spotify_request(BASE_URL + 'audio-features/', headers=HEADERS, params=params)
     return [{
-        'danceability': track_af.get('danceability', None),
-        'energy': track_af.get('energy', None),
-        'key': track_af.get('key', None),
-        'loudness': track_af.get('loudness', None),
-        'mode': track_af.get('mode', None),
-        'speechiness': track_af.get('speechiness', None),
-        'acousticness': track_af.get('acousticness', None),
-        'instrumentalness': track_af.get('instrumentalness', None),
-        'liveness': track_af.get('liveness', None),
-        'valence': track_af.get('valence', None),
-        'tempo': track_af.get('tempo', None)
+        'danceability': track_af.get('danceability', None) if track_af else None,
+        'energy': track_af.get('energy', None) if track_af else None,
+        'key': track_af.get('key', None) if track_af else None,
+        'loudness': track_af.get('loudness', None) if track_af else None,
+        'mode': track_af.get('mode', None) if track_af else None,
+        'speechiness': track_af.get('speechiness', None) if track_af else None,
+        'acousticness': track_af.get('acousticness', None) if track_af else None,
+        'instrumentalness': track_af.get('instrumentalness', None) if track_af else None,
+        'liveness': track_af.get('liveness', None) if track_af else None,
+        'valence': track_af.get('valence', None) if track_af else None,
+        'tempo': track_af.get('tempo', None) if track_af else None
     } for track_af in response['audio_features']]
 
 
@@ -168,7 +173,7 @@ def enrich_track_uri(row):
 
 def enrich_artist_uri(rows):
     print('INFO - enrich artist uri')
-    artist_uris = get_artist_uris([row[1]['track_uri'] for row in rows])
+    artist_uris = get_artist_uris([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
     for i in range(50):
         rows[i][1]['artist_uri'] = artist_uris[i]
@@ -178,7 +183,7 @@ def enrich_artist_uri(rows):
 
 def enrich_track_data(rows):
     print('INFO - enrich track data')
-    track_durations_ms, track_popularity = get_track_data([row[1]['track_uri'] for row in rows])
+    track_durations_ms, track_popularity = get_track_data([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
     for i in range(50):
         rows[i][1]['track_duration_ms'] = track_durations_ms[i]
@@ -189,7 +194,7 @@ def enrich_track_data(rows):
 
 def enrich_artist_data(rows):
     print('INFO - enrich artist data')
-    artist_genres, artist_popularity = get_artist_data([row[1]['artist_uri'] for row in rows])
+    artist_genres, artist_popularity = get_artist_data([row[1]['artist_uri'] if row[1]['artist_uri'] else 'NaN' for row in rows])
 
     for i in range(50):
         rows[i][1]['artist_genres'] = artist_genres[i]
@@ -200,7 +205,7 @@ def enrich_artist_data(rows):
 
 def enrich_track_audio_features(rows):
     print('INFO - enrich audio features')
-    track_af = get_track_audio_features([row[1]['track_uri'] for row in rows])
+    track_af = get_track_audio_features([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
     for i in range(50):
         rows[i][1]['audio_features'] = track_af[i]
