@@ -6,6 +6,8 @@ import time
 import pandas as pd
 import numpy as np
 import requests
+from elasticsearch import Elasticsearch
+from elasticsearch import helpers
 
 
 INDEX = '3'
@@ -13,16 +15,29 @@ INDEX = '3'
 RESOURCES_FOLDER = 'resources/my_spotify_data_'
 LAST_RESOURCES_FOLDER = 'resources/my_spotify_data_' + INDEX
 RESULTS_FOLDER = 'results/my_spotify_data_' + INDEX
+RESULT_FILE = '/v2.csv'
+
+##
 
 CONFIG_FILE = 'config.json'
 CONFIG = json.load(open(CONFIG_FILE, 'r', encoding='UTF-8'))
 
-# Spotify Authentication
-AUTH_URL = CONFIG['AUTH_URL']
-SPOTIFY_CLIENT_ID = CONFIG['SPOTIFY_CLIENT_ID']
-SPOTIFY_CLIENT_SECRET = CONFIG['SPOTIFY_CLIENT_SECRET']
+# Elastic authentication and config
+ELASTIC_HOSTS = CONFIG['elasticsearch']['hosts']
+ELASTIC_AUTH = (CONFIG['elasticsearch']['username'], CONFIG['elasticsearch']['password'])
+ELASTIC_INDICE_NAME = CONFIG['elasticsearch']['indice']['name']
+ELASTIC_INDICE_TYPE = CONFIG['elasticsearch']['indice']['type']
+ELASTIC_INDICE_SETTINGS = CONFIG['elasticsearch']['indice']['settings']
+ELASTIC_INDICE_MAPPINGS =  CONFIG['elasticsearch']['indice']['mappings']
+ELASTIC = Elasticsearch(hosts=ELASTIC_HOSTS, basic_auth=ELASTIC_AUTH)
 
-auth_response = requests.post(AUTH_URL, {
+# Spotify authentication and config
+SPOTIFY_CLIENT_ID = CONFIG['spotify']['client_id']
+SPOTIFY_CLIENT_SECRET = CONFIG['spotify']['client_secret']
+SPOTIFY_AUTH_URL = CONFIG['spotify']['auth_url']
+SPOTIFY_BASE_URL = CONFIG['spotify']['base_url']
+
+auth_response = requests.post(SPOTIFY_AUTH_URL, {
     'grant_type': 'client_credentials',
     'client_id': SPOTIFY_CLIENT_ID,
     'client_secret': SPOTIFY_CLIENT_SECRET,
@@ -30,10 +45,7 @@ auth_response = requests.post(AUTH_URL, {
 auth_response_data = auth_response.json()
 
 ACCESS_TOKEN = auth_response_data['access_token']
-
-# Spotify bases
-HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
-BASE_URL = 'https://api.spotify.com/v1/'
+SPOTIFY_HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
 
 
 def chunks_list(lst, chunk_size):
@@ -81,7 +93,7 @@ def get_track_uri(track_name, artist_name):
         ('limit', '1'),
         ('offset', '0')
     ]
-    response = do_spotify_request(BASE_URL + 'search/', headers=HEADERS, params=params)
+    response = do_spotify_request(SPOTIFY_BASE_URL + 'search/', headers=SPOTIFY_HEADERS, params=params)
     try:
         track = response['tracks']['items'][0]
         track_uri = track['uri'].split(':')[2]
@@ -101,7 +113,7 @@ def get_artist_uris(track_uris: list):
         ('type', 'track'),
         ('market', 'FR')
     ]
-    response = do_spotify_request(BASE_URL + 'tracks/', headers=HEADERS, params=params)
+    response = do_spotify_request(SPOTIFY_BASE_URL + 'tracks/', headers=SPOTIFY_HEADERS, params=params)
     tracks = response['tracks']
     artist_uris = [artists['artists'][0]['uri'].split(':')[2] if artists else None for artists in tracks]
     return artist_uris
@@ -113,7 +125,7 @@ def get_artist_data(artist_uris: list):
         ('type', 'track'),
         ('market', 'FR')
     ]
-    response = do_spotify_request(BASE_URL + 'artists/', headers=HEADERS, params=params)
+    response = do_spotify_request(SPOTIFY_BASE_URL + 'artists/', headers=SPOTIFY_HEADERS, params=params)
     artists = response['artists']
     artist_genres = [artist.get('genres', None) if artist else [] for artist in artists]
     artist_popularity = [artist.get('popularity', None) if artist else None for artist in artists]
@@ -126,7 +138,7 @@ def get_track_data(track_uris: list):
         ('type', 'track'),
         ('market', 'FR')
     ]
-    response = do_spotify_request(BASE_URL + 'tracks/', headers=HEADERS, params=params)
+    response = do_spotify_request(SPOTIFY_BASE_URL + 'tracks/', headers=SPOTIFY_HEADERS, params=params)
     tracks = response['tracks']
     track_durations_ms = [track.get('duration_ms', None) if track else None for track in tracks]
     track_popularity = [track.get('popularity', None) if track else None for track in tracks]
@@ -139,7 +151,7 @@ def get_track_audio_features(track_uris: list):
         ('type', 'track'),
         ('market', 'FR')
     ]
-    response = do_spotify_request(BASE_URL + 'audio-features/', headers=HEADERS, params=params)
+    response = do_spotify_request(SPOTIFY_BASE_URL + 'audio-features/', headers=SPOTIFY_HEADERS, params=params)
     return [{
         'danceability': track_af.get('danceability', None) if track_af else None,
         'energy': track_af.get('energy', None) if track_af else None,
@@ -213,33 +225,60 @@ def enrich_track_audio_features(rows):
     return rows
 
 
+def bulk_factory(df):
+    for document in df:
+        yield {
+            '_index': ELASTIC_INDICE_NAME,
+            '_id': document['index'],
+            '_source': document
+        }
+
+
+def set_multidata(elastic, data, request_timeout=10):
+    print(f' -> bulk {len(data)} documents')
+    response = helpers.bulk(elastic, bulk_factory(data), request_timeout=request_timeout)
+    print(f' <- bulk response is {response}')
+    
+
+def create_indice_if_not_exist(elastic, index):
+    if elastic.indices.exists(index = index):
+        print(f'INFO index {index} already exists')
+    else:
+        print(f'INFO index {index} does not exists')
+        request_body = {
+            'settings' : ELASTIC_INDICE_SETTINGS,
+            'mappings': ELASTIC_INDICE_MAPPINGS
+        }
+        elastic.indices.create(index = index, body = request_body)
+        print(f'INFO index {index} created')
+
+
 def app():
+    ## cerates indice
+    create_indice_if_not_exist(ELASTIC, ELASTIC_INDICE_NAME)
+
+    ## reads streaming files
     resources_files = [f for f in glob.glob(RESOURCES_FOLDER + '*/StreamingHistory*.json')]
     df_stream = pd.concat(map(pd.read_json, resources_files)).drop_duplicates()
+    df_stream['unique_id'] = df_stream['artistName'] + ':' + df_stream['trackName']
 
-    df_stream['UniqueID'] = df_stream['artistName'] + ':' + df_stream['trackName']
-
-    ##
-
+    ## reads library files
     df_library = pd.read_json(LAST_RESOURCES_FOLDER + '/YourLibrary_tracks.json')
-
-    df_library['UniqueID'] = df_library['artist'] + ":" + df_library['track']
-
+    df_library['unique_id'] = df_library['artist'] + ':' + df_library['track']
     new = df_library["uri"].str.split(":", expand=True)
     df_library['track_uri'] = new[2]
 
-    ##
-
+    ## merges streaming and library data
     df_tableau = df_stream.copy()
+    df_tableau['in_library'] = np.where(df_tableau['unique_id'].isin(df_library['unique_id'].tolist()), True, False)
+    df_tableau = pd.merge(df_tableau, df_library[['album', 'unique_id', 'track_uri']], how='left', on=['unique_id'])
 
-    df_tableau['In Library'] = np.where(df_tableau['UniqueID'].isin(df_library['UniqueID'].tolist()), 1, 0)
-
-    df_tableau = pd.merge(df_tableau, df_library[['album', 'UniqueID', 'track_uri']], how='left', on=['UniqueID'])
-
+    ## enriches the data and indexes it
     dict_all = {}
-
     df_tableau = df_tableau.reset_index()
+
     for rows in chunks_iter(df_tableau.iterrows(), 50):
+        dict_tmp = {}
 
         rows = list(map(enrich_track_uri, rows))
         rows = enrich_artist_uri(rows)
@@ -249,18 +288,21 @@ def app():
 
         for row in rows:
             dict_all[row[0]] = row[1]
+            dict_tmp[row[0]] = row[1]
+
+        df_tmp = pd.DataFrame.from_dict(dict_tmp, orient='index')
+        df_tmp.reset_index(inplace=True, drop=True)
+
+        json_tmp = json.loads(df_tmp.to_json(orient='records'))
+        set_multidata(ELASTIC, json_tmp)
 
     dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
     dict_all.reset_index(inplace=True, drop=True)
-    dict_all.head()
 
-    ##
-
+    ## writes data in csv file
     if not os.path.exists(RESULTS_FOLDER):
         os.mkdir(RESULTS_FOLDER)
-
-    dict_all.to_csv(RESULTS_FOLDER + '/v2.csv')
-
+    dict_all.to_csv(RESULTS_FOLDER + RESULT_FILE)
 
 if __name__ == '__main__':
     app()
