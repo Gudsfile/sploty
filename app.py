@@ -17,6 +17,8 @@ LAST_RESOURCES_FOLDER = 'resources/my_spotify_data_' + INDEX
 RESULTS_FOLDER = 'results/my_spotify_data_' + INDEX
 RESULT_FILE = '/v2.csv'
 
+CHUNK_SIZE = 50
+
 ##
 
 CONFIG_FILE = 'config.json'
@@ -189,7 +191,7 @@ def enrich_artist_uri(rows):
     print('INFO - enrich artist uri')
     artist_uris = get_artist_uris([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
-    for i in range(50):
+    for i in range(len(rows)):
         rows[i][1]['artist_uri'] = artist_uris[i]
 
     return rows
@@ -199,7 +201,7 @@ def enrich_track_data(rows):
     print('INFO - enrich track data')
     track_durations_ms, track_popularity = get_track_data([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
-    for i in range(50):
+    for i in range(len(rows)):
         rows[i][1]['track_duration_ms'] = track_durations_ms[i]
         rows[i][1]['track_popularity'] = track_popularity[i]
 
@@ -210,7 +212,7 @@ def enrich_artist_data(rows):
     print('INFO - enrich artist data')
     artist_genres, artist_popularity = get_artist_data([row[1]['artist_uri'] if row[1]['artist_uri'] else 'NaN' for row in rows])
 
-    for i in range(50):
+    for i in range(len(rows)):
         rows[i][1]['artist_genres'] = artist_genres[i]
         rows[i][1]['artist_popularity'] = artist_popularity[i]
 
@@ -221,7 +223,7 @@ def enrich_track_audio_features(rows):
     print('INFO - enrich audio features')
     track_af = get_track_audio_features([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
-    for i in range(50):
+    for i in range(len(rows)):
         rows[i][1]['audio_features'] = track_af[i]
 
     return rows
@@ -280,7 +282,7 @@ def app():
     dict_all = {}
     df_tableau = df_tableau.reset_index()
 
-    for rows in chunks_iter(df_tableau.iterrows(), 50):
+    for rows in chunks_iter(df_tableau.iterrows(), CHUNK_SIZE):
         dict_tmp = {}
 
         rows = list(map(enrich_track_uri, rows))
