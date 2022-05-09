@@ -37,6 +37,7 @@ SPOTIFY_CLIENT_ID = CONFIG['spotify']['client_id']
 SPOTIFY_CLIENT_SECRET = CONFIG['spotify']['client_secret']
 SPOTIFY_AUTH_URL = CONFIG['spotify']['auth_url']
 SPOTIFY_BASE_URL = CONFIG['spotify']['base_url']
+SPOTIFY_SLEEP = CONFIG['spotify']['s_sleep']
 
 auth_response = requests.post(SPOTIFY_AUTH_URL, {
     'grant_type': 'client_credentials',
@@ -81,8 +82,8 @@ def do_spotify_request(url, headers, params=None):
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as err:
-        print(f"WARNING - HTTPError - {err}")
-        time.sleep(5)
+        print(f"WARNING - HTTPError - {err} (sleeping {SPOTIFY_SLEEP}s...)")
+        time.sleep(SPOTIFY_SLEEP)
         return do_spotify_request(url, headers, params)
 
 
