@@ -23,13 +23,14 @@ CONFIG_FILE = 'config.json'
 CONFIG = json.load(open(CONFIG_FILE, 'r', encoding='UTF-8'))
 
 # Elastic authentication and config
-ELASTIC_HOSTS = CONFIG['elasticsearch']['hosts']
-ELASTIC_AUTH = (CONFIG['elasticsearch']['username'], CONFIG['elasticsearch']['password'])
-ELASTIC_INDICE_NAME = CONFIG['elasticsearch']['indice']['name']
-ELASTIC_INDICE_TYPE = CONFIG['elasticsearch']['indice']['type']
-ELASTIC_INDICE_SETTINGS = CONFIG['elasticsearch']['indice']['settings']
-ELASTIC_INDICE_MAPPINGS =  CONFIG['elasticsearch']['indice']['mappings']
-ELASTIC = Elasticsearch(hosts=ELASTIC_HOSTS, basic_auth=ELASTIC_AUTH)
+ELASTIC_IS_ENABLED = CONFIG['elasticsearch']['enable']
+ELASTIC_HOSTS = CONFIG['elasticsearch']['hosts'] if ELASTIC_IS_ENABLED else None
+ELASTIC_AUTH = (CONFIG['elasticsearch']['username'], CONFIG['elasticsearch']['password']) if ELASTIC_IS_ENABLED else None
+ELASTIC_INDICE_NAME = CONFIG['elasticsearch']['indice']['name'] if ELASTIC_IS_ENABLED else None
+ELASTIC_INDICE_TYPE = CONFIG['elasticsearch']['indice']['type'] if ELASTIC_IS_ENABLED else None
+ELASTIC_INDICE_SETTINGS = CONFIG['elasticsearch']['indice']['settings'] if ELASTIC_IS_ENABLED else None
+ELASTIC_INDICE_MAPPINGS =  CONFIG['elasticsearch']['indice']['mappings'] if ELASTIC_IS_ENABLED else None
+ELASTIC = Elasticsearch(hosts=ELASTIC_HOSTS, basic_auth=ELASTIC_AUTH) if ELASTIC_IS_ENABLED else None
 
 # Spotify authentication and config
 SPOTIFY_CLIENT_ID = CONFIG['spotify']['client_id']
@@ -255,7 +256,8 @@ def create_indice_if_not_exist(elastic, index):
 
 def app():
     ## cerates indice
-    create_indice_if_not_exist(ELASTIC, ELASTIC_INDICE_NAME)
+    if ELASTIC_IS_ENABLED:
+        create_indice_if_not_exist(ELASTIC, ELASTIC_INDICE_NAME)
 
     ## reads streaming files
     resources_files = [f for f in glob.glob(RESOURCES_FOLDER + '*/StreamingHistory*.json')]
@@ -294,7 +296,8 @@ def app():
         df_tmp.reset_index(inplace=True, drop=True)
 
         json_tmp = json.loads(df_tmp.to_json(orient='records'))
-        set_multidata(ELASTIC, json_tmp)
+        if ELASTIC_IS_ENABLED:
+            set_multidata(ELASTIC, json_tmp)
 
     dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
     dict_all.reset_index(inplace=True, drop=True)
