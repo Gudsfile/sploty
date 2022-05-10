@@ -9,20 +9,21 @@ import requests
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 
-
-INDEX = '3'
-
-RESOURCES_FOLDER = 'resources/my_spotify_data_'
-LAST_RESOURCES_FOLDER = 'resources/my_spotify_data_' + INDEX
-RESULTS_FOLDER = 'results/my_spotify_data_' + INDEX
-RESULT_FILE = '/v2.csv'
-
-CHUNK_SIZE = 50
-
 ##
 
 CONFIG_FILE = 'config.json'
 CONFIG = json.load(open(CONFIG_FILE, 'r', encoding='UTF-8'))
+
+# Files
+
+INDEX = CONFIG['file']['index']
+
+RESOURCES_FOLDER = CONFIG['file']['resources_folder']
+LAST_RESOURCES_FOLDER = RESOURCES_FOLDER + '_' + INDEX
+RESULTS_FOLDER = CONFIG['file']['results_folder'] + '_' + INDEX
+RESULT_FILE = CONFIG['file']['result_file']
+
+CHUNK_SIZE = CONFIG['file']['chunk_size']
 
 # Elastic authentication and config
 ELASTIC_IS_ENABLED = CONFIG['elasticsearch']['enable']
