@@ -1,0 +1,120 @@
+{
+    "READ_ME": "This file contains configuration variables that shouldn’t be in version control. This includes things like API keys and database URIs containing passwords. This also contains variables that are specific to this particular instance of your application. For example, you might have DEBUG = False in config.py, but set DEBUG = True in instance/config.py on your local machine for development. Since this file will be read in after config.py, it will override it and set DEBUG = True.",
+    "logger": {
+        "debug": true
+    },
+    "file": {
+        "index": "1",
+        "resources_folder": "resources/my_spotify_data",
+        "results_folder": "results/my_spotify_data",
+        "result_file": "result.csv",
+        "chunk_size": 50
+    },
+    "spotify": {
+        "s_sleep": 60,
+        "client_id": "TO BE RENSEIGNED",
+        "client_secret": "TO BE RENSEIGNED",
+        "auth_url": "https://accounts.spotify.com/api/token",
+        "base_url": "https://api.spotify.com/v1/"
+    },
+    "elasticsearch": {
+        "enable": false,
+        "hosts": [
+            "http://localhost:9200"
+        ],
+        "username": "elastic",
+        "password": "changeme",
+        "indice": {
+            "name": "spotify-stream-history",
+            "type": "reccord",
+            "settings": {
+                "number_of_shards": 5,
+                "number_of_replicas": 1
+            },
+            "mappings": {
+                "properties": {
+                    "@timestamp": {
+                        "type": "date"
+                    },
+                    "in_library": {
+                        "type": "boolean"
+                    },
+                    "unique_id": {
+                        "type": "text"
+                    },
+                    "album": {
+                        "type": "keyword"
+                    },
+                    "artistName": {
+                        "type": "keyword"
+                    },
+                    "endTime": {
+                        "type": "date",
+                        "format": "yyyy-MM-dd HH:mm"
+                    },
+                    "msPlayed": {
+                        "type": "long"
+                    },
+                    "trackName": {
+                        "type": "keyword"
+                    },
+                    "track_uri": {
+                        "type": "keyword"
+                    },
+                    "track_duration_ms": {
+                        "type": "long"
+                    },
+                    "track_popularity": {
+                        "type": "long"
+                    },
+                    "artist_uri": {
+                        "type": "keyword"
+                    },
+                    "artist_genres": {
+                        "type": "text"
+                    },
+                    "artist_popularity": {
+                        "type": "long"
+                    },
+                    "audio_features": {
+                        "properties": {
+                            "danceability": {
+                                "type": "integer"
+                            },
+                            "energy": {
+                                "type": "integer"
+                            },
+                            "key": {
+                                "type": "integer"
+                            },
+                            "loudness": {
+                                "type": "integer"
+                            },
+                            "mode": {
+                                "type": "integer"
+                            },
+                            "speechiness": {
+                                "type": "integer"
+                            },
+                            "acousticness": {
+                                "type": "integer"
+                            },
+                            "instrumentalness": {
+                                "type": "integer"
+                            },
+                            "liveness": {
+                                "type": "integer"
+                            },
+                            "valence": {
+                                "type": "integer"
+                            },
+                            "tempo": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
