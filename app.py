@@ -52,6 +52,18 @@ auth_response_data = auth_response.json()
 ACCESS_TOKEN = auth_response_data['access_token']
 SPOTIFY_HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
 
+## Color
+class bold_color:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
 
 def chunks_list(lst, chunk_size):
     """Yield successive n-sized chunks from lst."""
@@ -76,10 +88,7 @@ def chunks_iter(iterable, chunk_size):
 
 def do_spotify_request(url, headers, params=None):
     try:
-        if params:
-            response = requests.get(url, headers=headers, params=params)
-        else:
-            response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, params=params)
         print(f' -> {response.request.url}')
         print(f" <- {response.status_code} {response.text[:200].replace(' ', '').encode('UTF-8')}")
         response.raise_for_status()
@@ -278,13 +287,20 @@ def app():
     df_tableau = df_stream.copy()
     df_tableau['in_library'] = np.where(df_tableau['unique_id'].isin(df_library['unique_id'].tolist()), True, False)
     df_tableau = pd.merge(df_tableau, df_library[['album', 'unique_id', 'track_uri']], how='left', on=['unique_id'])
+    df_tableau = df_tableau.reset_index()
+
+    ## feature
+    df = df_tableau[['track_uri', 'trackName', 'artistName', 'unique_id']].drop_duplicates('unique_id')
+    df = df.reset_index()
 
     ## enriches the data and indexes it
     dict_all = {}
-    df_tableau = df_tableau.reset_index()
-
-    for rows in chunks_iter(df_tableau.iterrows(), CHUNK_SIZE):
-        dict_tmp = {}
+    target = len(df)
+    step = CHUNK_SIZE*10
+    checkpoint = 0
+    for rows in chunks_iter(df.iterrows(), CHUNK_SIZE):
+        #dict_tmp = {}
+        print(' '*40 + bold_color.PURPLE + '[' + '-'*int(checkpoint/step) + ' '*int((target-checkpoint)/step) + ']' + bold_color.DARKCYAN + f' {checkpoint}/{target}' + bold_color.END)
 
         rows = list(map(enrich_track_uri, rows))
         rows = enrich_artist_uri(rows)
@@ -294,22 +310,30 @@ def app():
 
         for row in rows:
             dict_all[row[0]] = row[1]
-            dict_tmp[row[0]] = row[1]
+            #dict_tmp[row[0]] = row[1]
 
-        df_tmp = pd.DataFrame.from_dict(dict_tmp, orient='index')
-        df_tmp.reset_index(inplace=True, drop=True)
+        #df_tmp = pd.DataFrame.from_dict(dict_tmp, orient='index')
+        #df_tmp.reset_index(inplace=True, drop=True)
 
-        json_tmp = json.loads(df_tmp.to_json(orient='records'))
+        #json_tmp = json.loads(df_tmp.to_json(orient='records'))
         if ELASTIC_IS_ENABLED:
-            set_multidata(ELASTIC, json_tmp)
+            #set_multidata(ELASTIC, json_tmp)
+            pass
+
+        checkpoint += CHUNK_SIZE
 
     dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
     dict_all.reset_index(inplace=True, drop=True)
 
+    # df_tableau = df_tableau.drop(columns=['track_uri'])
+    df_tableau = df_tableau.merge(dict_all, how='left', on=['unique_id'], suffixes=(None, "_y"))
+    df_tableau['track_uri'] = df_tableau['track_uri'].fillna(df_tableau['track_uri_y'])
+    df_tableau = df_tableau.drop(['index_y', 'track_uri_y', 'trackName_y', 'artistName_y'], axis=1)
+
     ## writes data in csv file
     if not os.path.exists(RESULTS_FOLDER):
         os.mkdir(RESULTS_FOLDER)
-    dict_all.to_csv(RESULTS_FOLDER + RESULT_FILE)
+    df_tableau.to_csv(RESULTS_FOLDER + RESULT_FILE)
 
 if __name__ == '__main__':
     app()
