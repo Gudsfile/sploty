@@ -267,6 +267,99 @@ def create_indice_if_not_exist(elastic, index):
         print(f'INFO index {index} created')
 
 
+
+def another_get(track_uris):
+    params = [
+        ('ids', ','.join(track_uris)),
+        ('type', 'track'),
+        ('market', 'FR')
+    ]
+    return do_spotify_request(SPOTIFY_BASE_URL + 'tracks/', headers=SPOTIFY_HEADERS, params=params)
+
+
+def better_get(track_name, artist_name):
+    params = [
+        ('q', artist_name + ' track:' + track_name.replace('\'', ' ')),
+        ('type', 'track'),
+        ('market', 'FR'),
+        ('limit', '1'),
+        ('offset', '0')
+    ]
+    return do_spotify_request(SPOTIFY_BASE_URL + 'search/', headers=SPOTIFY_HEADERS, params=params)
+
+
+def better_enrich(df):
+    print(f'INFO - enrich track data for {len(df)} tracks')
+
+    rows_with_track_uri = df[df['track_uri'].notna()]
+    rows_without_track_uri = df[df['track_uri'].isna()]
+
+    # if track uri is nan
+    print(f'INFO - enrich track data and uri for {len(rows_without_track_uri)} tracks')
+    dict_all = {}
+    target = len(rows_without_track_uri)
+    step = CHUNK_SIZE*10
+    checkpoint = 0
+    for rows in chunks_iter(rows_without_track_uri.iterrows(), CHUNK_SIZE):
+        for row in rows:
+            index = row[0]
+            stream = row[1]
+
+            response = better_get(stream['trackName'], stream['artistName'])
+
+            try:
+                track = response['tracks']['items'][0]
+                track_uri = track['uri'].split(':')[2]
+            except IndexError as err:
+                print(f"WARNING - IndexError - {err}")
+                continue
+
+            track_uri = track['uri'].split(':')[2]
+            artist = track['artists'][0] # only one artist :(
+            album = track['album']
+
+            print(f'INFO - enrich track uri n°{index} (NaN -> {track_uri})')
+
+            stream['track_uri'] = track_uri
+            stream['artist_uri'] = artist['uri'].split(':')[2]
+            stream['track_duration_ms'] = track.get('duration_ms', None)
+            stream['track_popularity'] = track.get('popularity', None)
+            dict_all[index] = stream
+        checkpoint += CHUNK_SIZE
+        break
+
+    # if track already have an uri
+    print(f'INFO - enrich track data for {len(rows_with_track_uri)} tracks')
+    target = len(rows_with_track_uri)
+    step = CHUNK_SIZE*10
+    checkpoint = 0
+    for rows in chunks_iter(rows_with_track_uri.iterrows(), CHUNK_SIZE):
+        response = another_get([row[1]['track_uri'] for row in rows]) # il doit y avoir mieux
+        for i, row in enumerate(rows):
+            index = row[0]
+            stream = row[1]
+
+            track = response['tracks'][i]
+            artist = track['artists'][0] # only one artist :(
+            album = track['album']
+            track_uri = track['uri']
+
+            print(f'INFO - enrich track uri n°{index} ({track_uri})')
+
+            stream['artist_uri'] = artist['uri'].split(':')[2]
+            stream['track_duration_ms'] = track.get('duration_ms', None)
+            stream['track_popularity'] = track.get('popularity', None)
+            dict_all[index] = stream
+        checkpoint += CHUNK_SIZE
+        break
+
+    res = pd.DataFrame.from_dict(dict_all, orient='index')
+    res.reset_index(inplace=True, drop=True)
+
+    return res
+
+
+
 def app():
     ## cerates indice
     if ELASTIC_IS_ENABLED:
@@ -293,40 +386,23 @@ def app():
     df = df_tableau[['track_uri', 'trackName', 'artistName', 'unique_id']].drop_duplicates('unique_id')
     df = df.reset_index()
 
+    ############################# TODO
+    # redesign enrichment part
+    # piste: récupérer que les artistes en 1 seul exemplaire, faire les requêtes 
+    #        et joindre sur l'artiste avec le df pour remplir toutes les occu d'un artiste d'un coup
+    #        1 recherche / artiste
+    # with_track_uri = df[df['track_uri'].notna()]
+    # artists = parcoureur(with_track_uri[['track_uri']])
+    #.drop_duplicates('unique_id')
+
     ## enriches the data and indexes it
-    dict_all = {}
-    target = len(df)
-    step = CHUNK_SIZE*10
-    checkpoint = 0
-    for rows in chunks_iter(df.iterrows(), CHUNK_SIZE):
-        #dict_tmp = {}
-        print(' '*40 + bold_color.PURPLE + '[' + '-'*int(checkpoint/step) + ' '*int((target-checkpoint)/step) + ']' + bold_color.DARKCYAN + f' {checkpoint}/{target}' + bold_color.END)
-
-        rows = list(map(enrich_track_uri, rows))
-        rows = enrich_artist_uri(rows)
-        rows = enrich_artist_data(rows)
-        rows = enrich_track_data(rows)
-        rows = enrich_track_audio_features(rows)
-
-        for row in rows:
-            dict_all[row[0]] = row[1]
-            #dict_tmp[row[0]] = row[1]
-
-        #df_tmp = pd.DataFrame.from_dict(dict_tmp, orient='index')
-        #df_tmp.reset_index(inplace=True, drop=True)
-
-        #json_tmp = json.loads(df_tmp.to_json(orient='records'))
-        if ELASTIC_IS_ENABLED:
-            #set_multidata(ELASTIC, json_tmp)
-            pass
-
-        checkpoint += CHUNK_SIZE
-
-    dict_all = pd.DataFrame.from_dict(dict_all, orient='index')
-    dict_all.reset_index(inplace=True, drop=True)
+    complete_data = better_enrich(df)
+ 
+    # rows = enrich_artist_data(rows)
+    # rows = enrich_track_audio_features(rows)
 
     # df_tableau = df_tableau.drop(columns=['track_uri'])
-    df_tableau = df_tableau.merge(dict_all, how='left', on=['unique_id'], suffixes=(None, "_y"))
+    df_tableau = df_tableau.merge(complete_data, how='left', on=['unique_id'], suffixes=(None, "_y"))
     df_tableau['track_uri'] = df_tableau['track_uri'].fillna(df_tableau['track_uri_y'])
     df_tableau = df_tableau.drop(['index_y', 'track_uri_y', 'trackName_y', 'artistName_y'], axis=1)
 
