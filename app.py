@@ -1,10 +1,10 @@
-import json
 import glob
+import json
 import os
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import requests
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
@@ -29,14 +29,15 @@ CHUNK_SIZE = CONFIG['file']['chunk_size']
 # Elastic authentication and config
 ELASTIC_IS_ENABLED = CONFIG['elasticsearch']['enable']
 ELASTIC_HOSTS = CONFIG['elasticsearch']['hosts'] if ELASTIC_IS_ENABLED else None
-ELASTIC_AUTH = (CONFIG['elasticsearch']['username'], CONFIG['elasticsearch']['password']) if ELASTIC_IS_ENABLED else None
+ELASTIC_AUTH = (
+CONFIG['elasticsearch']['username'], CONFIG['elasticsearch']['password']) if ELASTIC_IS_ENABLED else None
 ELASTIC_INDICE_NAME = CONFIG['elasticsearch']['indice']['name'] if ELASTIC_IS_ENABLED else None
 ELASTIC_INDICE_TYPE = CONFIG['elasticsearch']['indice']['type'] if ELASTIC_IS_ENABLED else None
 ELASTIC_INDICE_SETTINGS = CONFIG['elasticsearch']['indice']['settings'] if ELASTIC_IS_ENABLED else None
-ELASTIC_INDICE_MAPPINGS =  CONFIG['elasticsearch']['indice']['mappings'] if ELASTIC_IS_ENABLED else None
+ELASTIC_INDICE_MAPPINGS = CONFIG['elasticsearch']['indice']['mappings'] if ELASTIC_IS_ENABLED else None
 ELASTIC = Elasticsearch(hosts=ELASTIC_HOSTS, basic_auth=ELASTIC_AUTH) if ELASTIC_IS_ENABLED else None
 
-# Spotify authentication and config
+# Spotify's authentication and config
 SPOTIFY_CLIENT_ID = CONFIG['spotify']['client_id']
 SPOTIFY_CLIENT_SECRET = CONFIG['spotify']['client_secret']
 SPOTIFY_AUTH_URL = CONFIG['spotify']['auth_url']
@@ -53,7 +54,8 @@ auth_response_data = auth_response.json()
 ACCESS_TOKEN = auth_response_data['access_token']
 SPOTIFY_HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
 
-## Color
+
+# Color
 class BoldColor:
     PURPLE = '\033[95m'
     CYAN = '\033[96m'
@@ -65,6 +67,7 @@ class BoldColor:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
     END = '\033[0m'
+
 
 def chunks_list(lst, chunk_size):
     """Yield successive n-sized chunks from lst."""
@@ -115,10 +118,6 @@ def get_track_uri(track_name, artist_name):
     except IndexError as err:
         print(f"WARNING - IndexError - {err}")
         track_uri = None
-
-    # a_uri = result_track['artists'][0]['uri'].split(':')[2]
-    # track_popularity = result_track.get('popularity', None)
-    # track_duration_ms = result_track.get('duration_ms', None)
     return track_uri
 
 
@@ -210,7 +209,8 @@ def enrich_artist_uri(rows):
 
 def enrich_track_data(rows):
     print('INFO - enrich track data')
-    track_durations_ms, track_popularity = get_track_data([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
+    track_durations_ms, track_popularity = get_track_data(
+        [row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
     for i, row in enumerate(rows):
         row[1]['track_duration_ms'] = track_durations_ms[i]
@@ -221,7 +221,8 @@ def enrich_track_data(rows):
 
 def enrich_artist_data(rows):
     print('INFO - enrich artist data')
-    artist_genres, artist_popularity = get_artist_data([row[1]['artist_uri'] if row[1]['artist_uri'] else 'NaN' for row in rows])
+    artist_genres, artist_popularity = get_artist_data(
+        [row[1]['artist_uri'] if row[1]['artist_uri'] else 'NaN' for row in rows])
 
     for i, row in enumerate(rows):
         row[1]['artist_genres'] = artist_genres[i]
@@ -246,7 +247,7 @@ def bulk_factory(df):
             '_index': ELASTIC_INDICE_NAME,
             '_id': document['index'],
             '_source': document
-            }
+        }
 
 
 def set_multidata(elastic, data, request_timeout=10):
@@ -256,15 +257,15 @@ def set_multidata(elastic, data, request_timeout=10):
 
 
 def create_indice_if_not_exist(elastic, index):
-    if elastic.indices.exists(index = index):
+    if elastic.indices.exists(index=index):
         print(f'INFO index {index} already exists')
     else:
         print(f'INFO index {index} does not exists')
         request_body = {
-            'settings' : ELASTIC_INDICE_SETTINGS,
+            'settings': ELASTIC_INDICE_SETTINGS,
             'mappings': ELASTIC_INDICE_MAPPINGS
         }
-        elastic.indices.create(index = index, body = request_body)
+        elastic.indices.create(index=index, body=request_body)
         print(f'INFO index {index} created')
 
 
@@ -308,12 +309,13 @@ def saver(df_tableau, complete_data):
     to_write = toto[toto['is_done'] == True]
     to_keep = toto[toto['is_done'] == False]
 
-    ## writes data in csv file
+    # writes data in csv file
     if not os.path.exists(RESULTS_FOLDER):
         os.mkdir(RESULTS_FOLDER)
     to_write.to_csv(RESULTS_FOLDER + RESULT_FILE, mode='a', header=not os.path.exists(RESULTS_FOLDER + RESULT_FILE))
 
     return to_keep.reset_index(drop=True)
+
 
 def better_enrich(df_tableau):
     print(f'INFO - enrich track data for {len(df_tableau)} tracks')
@@ -329,10 +331,11 @@ def better_enrich(df_tableau):
     print(f'INFO - enrich track data and uri for {len(rows_without_track_uri)} tracks')
     dict_all = {}
     target = len(rows_without_track_uri)
-    step = CHUNK_SIZE*10
+    step = CHUNK_SIZE * 10
     checkpoint = 0
     for rows in chunks_iter(rows_without_track_uri.iterrows(), CHUNK_SIZE):
-        print(' '*40 + BoldColor.PURPLE + '[' + '-'*int(checkpoint/step) + ' '*int((target-checkpoint)/step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
+        print(' ' * 40 + BoldColor.PURPLE + '[' + '-' * int(checkpoint / step) + ' ' * int(
+            (target - checkpoint) / step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
         for row in rows:
             index = row[0]
             stream = row[1]
@@ -347,7 +350,7 @@ def better_enrich(df_tableau):
                 continue
 
             track_uri = track['uri'].split(':')[2]
-            artist = track['artists'][0] # only one artist :(
+            artist = track['artists'][0]  # only one artist :(
             album = track['album']
 
             print(f'INFO - enrich track uri n°{index} (NaN -> {track_uri})')
@@ -364,17 +367,17 @@ def better_enrich(df_tableau):
     # if track already have an uri
     print(f'INFO - enrich track data for {len(rows_with_track_uri)} tracks')
     target = len(rows_with_track_uri)
-    step = CHUNK_SIZE*10
+    step = CHUNK_SIZE * 10
     checkpoint = 0
     for rows in chunks_iter(rows_with_track_uri.iterrows(), CHUNK_SIZE):
-        print(' '*40 + BoldColor.PURPLE + '[' + '-'*int(checkpoint/step) + ' '*int((target-checkpoint)/step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
-        response = another_get([row[1]['track_uri'] for row in rows]) # il doit y avoir mieux
+        print(' ' * 40 + BoldColor.PURPLE + '[' + '-' * int(checkpoint / step) + ' ' * int((target - checkpoint) / step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
+        response = another_get([row[1]['track_uri'] for row in rows])  # il doit y avoir mieux
         for i, row in enumerate(rows):
             index = row[0]
             stream = row[1]
 
             track = response['tracks'][i]
-            artist = track['artists'][0] # only one artist :(
+            artist = track['artists'][0]  # only one artist :(
             album = track['album']
             track_uri = track['uri']
 
@@ -390,28 +393,28 @@ def better_enrich(df_tableau):
 
 
 def app():
-    ## cerates indice
+    # cerates indice
     if ELASTIC_IS_ENABLED:
         create_indice_if_not_exist(ELASTIC, ELASTIC_INDICE_NAME)
 
-    ## reads streaming files
+    # reads streaming files
     resources_files = [f for f in glob.glob(RESOURCES_FOLDER + '*/StreamingHistory*.json')]
     df_stream = pd.concat(map(pd.read_json, resources_files)).drop_duplicates()
     df_stream['unique_id'] = df_stream['artistName'] + ':' + df_stream['trackName']
 
-    ## reads library files
+    # reads library files
     df_library = pd.read_json(LAST_RESOURCES_FOLDER + '/YourLibrary_tracks.json')
     df_library['unique_id'] = df_library['artist'] + ':' + df_library['track']
     new = df_library["uri"].str.split(":", expand=True)
     df_library['track_uri'] = new[2]
 
-    ## merges streaming and library data
+    # merges streaming and library data
     df_tableau = df_stream.copy()
     df_tableau['in_library'] = np.where(df_tableau['unique_id'].isin(df_library['unique_id'].tolist()), True, False)
     df_tableau = pd.merge(df_tableau, df_library[['album', 'unique_id', 'track_uri']], how='left', on=['unique_id'])
     df_tableau = df_tableau.reset_index()
 
-    ## get already saved data
+    # get already saved data
     print(f'INFO - {len(df_tableau)} rows to enrich')
     try:
         saved_df = pd.read_csv('results/my_spotify_data_5testing_file.csv')
@@ -430,9 +433,9 @@ def app():
     #        1 recherche / artiste
     # with_track_uri = df[df['track_uri'].notna()]
     # artists = parcoureur(with_track_uri[['track_uri']])
-    #.drop_duplicates('unique_id')
+    # .drop_duplicates('unique_id')
 
-    ## enriches the data and indexes it
+    # enriches the data and indexes it
     better_enrich(df_tableau)
 
     # rows = enrich_artist_data(rows)
