@@ -9,6 +9,7 @@ import requests
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 from pandas.errors import EmptyDataError
+from requests.exceptions import HTTPError
 
 ##
 
@@ -97,10 +98,15 @@ def do_spotify_request(url, headers, params=None):
         print(f" <- {response.status_code} {response.text[:200].replace(' ', '').encode('UTF-8')}")
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.HTTPError as err:
-        print(f"WARNING - HTTPError - {err} (sleeping {SPOTIFY_SLEEP}s...)")
-        time.sleep(SPOTIFY_SLEEP)
-        return do_spotify_request(url, headers, params)
+    except HTTPError as err:
+        # Todo inverser, par défaut on remonte l'erreur dans des cas particuliers on fait une action
+        if err.response.status_code == 404:
+            print(f"WARN - HTTPError - {err} (skipping)")
+            raise
+        else:
+            print(f"WARN - HTTPError - {err} (sleeping {SPOTIFY_SLEEP}s...)")
+            time.sleep(SPOTIFY_SLEEP)
+            return do_spotify_request(url, headers, params)
 
 
 def get_track_uri(track_name, artist_name):
@@ -337,29 +343,34 @@ def better_enrich(df_tableau):
         print(' ' * 40 + BoldColor.PURPLE + '[' + '-' * int(checkpoint / step) + ' ' * int(
             (target - checkpoint) / step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
         for row in rows:
-            index = row[0]
-            stream = row[1]
-
-            response = better_get(stream['trackName'], stream['artistName'])
-
             try:
-                track = response['tracks']['items'][0]
+                index = row[0]
+                stream = row[1]
+
+                response = better_get(stream['trackName'], stream['artistName'])
+
+                try:
+                    track = response['tracks']['items'][0]
+                    track_uri = track['uri'].split(':')[2]
+                except IndexError as err:
+                    print(f"WARNING - IndexError - {err}")
+                    continue
+
                 track_uri = track['uri'].split(':')[2]
-            except IndexError as err:
-                print(f"WARNING - IndexError - {err}")
+                artist = track['artists'][0]  # only one artist :(
+                album = track['album']
+
+                print(f'DEBUG - enrich track uri n°{index} (NaN -> {track_uri})')
+
+                stream['track_uri'] = track_uri
+                stream['artist_uri'] = artist['uri'].split(':')[2]
+                stream['track_duration_ms'] = track.get('duration_ms', None)
+                stream['track_popularity'] = track.get('popularity', None)
+                dict_all[index] = stream
+            except HTTPError as err:
+                print(f"WARNING - HTTPError - {err} - for  {row}")
                 continue
 
-            track_uri = track['uri'].split(':')[2]
-            artist = track['artists'][0]  # only one artist :(
-            album = track['album']
-
-            print(f'INFO - enrich track uri n°{index} (NaN -> {track_uri})')
-
-            stream['track_uri'] = track_uri
-            stream['artist_uri'] = artist['uri'].split(':')[2]
-            stream['track_duration_ms'] = track.get('duration_ms', None)
-            stream['track_popularity'] = track.get('popularity', None)
-            dict_all[index] = stream
         checkpoint += CHUNK_SIZE
         df_tableau = saver(df_tableau, dict_all)
         dict_all = {}
@@ -381,7 +392,7 @@ def better_enrich(df_tableau):
             album = track['album']
             track_uri = track['uri']
 
-            print(f'INFO - enrich track uri n°{index} ({track_uri})')
+            print(f'DEBUG - enrich track uri n°{index} ({track_uri})')
 
             stream['artist_uri'] = artist['uri'].split(':')[2]
             stream['track_duration_ms'] = track.get('duration_ms', None)
