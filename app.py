@@ -99,14 +99,12 @@ def do_spotify_request(url, headers, params=None):
         response.raise_for_status()
         return response.json()
     except HTTPError as err:
-        # Todo inverser, par défaut on remonte l'erreur dans des cas particuliers on fait une action
-        if err.response.status_code == 404:
-            print(f"WARN - HTTPError - {err} (skipping)")
-            raise
-        else:
+        if err.response.status_code == 429:
             print(f"WARN - HTTPError - {err} (sleeping {SPOTIFY_SLEEP}s...)")
             time.sleep(SPOTIFY_SLEEP)
             return do_spotify_request(url, headers, params)
+        print(f"WARN - HTTPError - {err} (skipping)")
+        raise
 
 
 def get_track_uri(track_name, artist_name):
