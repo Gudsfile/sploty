@@ -8,6 +8,7 @@ import numpy as np
 import requests
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
+from pandas.errors import EmptyDataError
 
 ##
 
@@ -53,7 +54,7 @@ ACCESS_TOKEN = auth_response_data['access_token']
 SPOTIFY_HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
 
 ## Color
-class bold_color:
+class BoldColor:
     PURPLE = '\033[95m'
     CYAN = '\033[96m'
     DARKCYAN = '\033[36m'
@@ -245,7 +246,7 @@ def bulk_factory(df):
             '_index': ELASTIC_INDICE_NAME,
             '_id': document['index'],
             '_source': document
-        }
+            }
 
 
 def set_multidata(elastic, data, request_timeout=10):
@@ -265,7 +266,6 @@ def create_indice_if_not_exist(elastic, index):
         }
         elastic.indices.create(index = index, body = request_body)
         print(f'INFO index {index} created')
-
 
 
 def another_get(track_uris):
@@ -288,9 +288,40 @@ def better_get(track_name, artist_name):
     return do_spotify_request(SPOTIFY_BASE_URL + 'search/', headers=SPOTIFY_HEADERS, params=params)
 
 
-def better_enrich(df):
-    print(f'INFO - enrich track data for {len(df)} tracks')
+def merger(df1, df5):
+    df1['is_done'] = df1.unique_id.isin(df5.unique_id)
+    df = df1.merge(df5, on='unique_id', how='left')
 
+    for c_x in df.columns:
+        if c_x.endswith('_x'):
+            c = c_x.removesuffix('_x')
+            c_y = c + '_y'
+            df[c] = df[c_y].where(df.is_done, df[c_x])
+    return df.loc[:, ~df.columns.str.contains('_x$|_y$')]
+
+
+def saver(df_tableau, complete_data):
+    complete_data = pd.DataFrame.from_dict(complete_data, orient='index')
+    complete_data.reset_index(inplace=True, drop=True)
+
+    toto = merger(df_tableau, complete_data)
+    to_write = toto[toto['is_done'] == True]
+    to_keep = toto[toto['is_done'] == False]
+
+    ## writes data in csv file
+    if not os.path.exists(RESULTS_FOLDER):
+        os.mkdir(RESULTS_FOLDER)
+    to_write.to_csv(RESULTS_FOLDER + RESULT_FILE, mode='a', header=not os.path.exists(RESULTS_FOLDER + RESULT_FILE))
+
+    return to_keep.reset_index(drop=True)
+
+def better_enrich(df_tableau):
+    print(f'INFO - enrich track data for {len(df_tableau)} tracks')
+
+    df = df_tableau[['track_uri', 'trackName', 'artistName', 'unique_id']].drop_duplicates('unique_id')
+    df = df.reset_index()
+
+    print(f'INFO - reduce enrich for only {len(df)} tracks')
     rows_with_track_uri = df[df['track_uri'].notna()]
     rows_without_track_uri = df[df['track_uri'].isna()]
 
@@ -301,6 +332,7 @@ def better_enrich(df):
     step = CHUNK_SIZE*10
     checkpoint = 0
     for rows in chunks_iter(rows_without_track_uri.iterrows(), CHUNK_SIZE):
+        print(' '*40 + BoldColor.PURPLE + '[' + '-'*int(checkpoint/step) + ' '*int((target-checkpoint)/step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
         for row in rows:
             index = row[0]
             stream = row[1]
@@ -326,7 +358,8 @@ def better_enrich(df):
             stream['track_popularity'] = track.get('popularity', None)
             dict_all[index] = stream
         checkpoint += CHUNK_SIZE
-        break
+        df_tableau = saver(df_tableau, dict_all)
+        dict_all = {}
 
     # if track already have an uri
     print(f'INFO - enrich track data for {len(rows_with_track_uri)} tracks')
@@ -334,6 +367,7 @@ def better_enrich(df):
     step = CHUNK_SIZE*10
     checkpoint = 0
     for rows in chunks_iter(rows_with_track_uri.iterrows(), CHUNK_SIZE):
+        print(' '*40 + BoldColor.PURPLE + '[' + '-'*int(checkpoint/step) + ' '*int((target-checkpoint)/step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
         response = another_get([row[1]['track_uri'] for row in rows]) # il doit y avoir mieux
         for i, row in enumerate(rows):
             index = row[0]
@@ -351,13 +385,8 @@ def better_enrich(df):
             stream['track_popularity'] = track.get('popularity', None)
             dict_all[index] = stream
         checkpoint += CHUNK_SIZE
-        break
-
-    res = pd.DataFrame.from_dict(dict_all, orient='index')
-    res.reset_index(inplace=True, drop=True)
-
-    return res
-
+        df_tableau = saver(df_tableau, dict_all)
+        dict_all = {}
 
 
 def app():
@@ -382,13 +411,21 @@ def app():
     df_tableau = pd.merge(df_tableau, df_library[['album', 'unique_id', 'track_uri']], how='left', on=['unique_id'])
     df_tableau = df_tableau.reset_index()
 
-    ## feature
-    df = df_tableau[['track_uri', 'trackName', 'artistName', 'unique_id']].drop_duplicates('unique_id')
-    df = df.reset_index()
+    ## get already saved data
+    print(f'INFO - {len(df_tableau)} rows to enrich')
+    try:
+        saved_df = pd.read_csv('results/my_spotify_data_5testing_file.csv')
+        print(f'INFO - {len(saved_df)} rows founds')
+        df_tableau = df_tableau[~df_tableau.unique_id.isin(saved_df.unique_id)]
+        print(f'INFO - only {len(df_tableau)} rows to enrich')
+    except EmptyDataError:
+        print('WARN - empty backup file found')
+    except FileNotFoundError:
+        print('WARN - no backup file found')
 
     ############################# TODO
     # redesign enrichment part
-    # piste: récupérer que les artistes en 1 seul exemplaire, faire les requêtes 
+    # piste: récupérer que les artistes en 1 seul exemplaire, faire les requêtes
     #        et joindre sur l'artiste avec le df pour remplir toutes les occu d'un artiste d'un coup
     #        1 recherche / artiste
     # with_track_uri = df[df['track_uri'].notna()]
@@ -396,20 +433,11 @@ def app():
     #.drop_duplicates('unique_id')
 
     ## enriches the data and indexes it
-    complete_data = better_enrich(df)
- 
+    better_enrich(df_tableau)
+
     # rows = enrich_artist_data(rows)
     # rows = enrich_track_audio_features(rows)
 
-    # df_tableau = df_tableau.drop(columns=['track_uri'])
-    df_tableau = df_tableau.merge(complete_data, how='left', on=['unique_id'], suffixes=(None, "_y"))
-    df_tableau['track_uri'] = df_tableau['track_uri'].fillna(df_tableau['track_uri_y'])
-    df_tableau = df_tableau.drop(['index_y', 'track_uri_y', 'trackName_y', 'artistName_y'], axis=1)
-
-    ## writes data in csv file
-    if not os.path.exists(RESULTS_FOLDER):
-        os.mkdir(RESULTS_FOLDER)
-    df_tableau.to_csv(RESULTS_FOLDER + RESULT_FILE)
 
 if __name__ == '__main__':
     app()
