@@ -435,16 +435,7 @@ def app():
     except FileNotFoundError:
         print('WARN - no backup file found')
 
-    ############################# TODO
-    # redesign enrichment part
-    # piste: récupérer que les artistes en 1 seul exemplaire, faire les requêtes
-    #        et joindre sur l'artiste avec le df pour remplir toutes les occu d'un artiste d'un coup
-    #        1 recherche / artiste
-    # with_track_uri = df[df['track_uri'].notna()]
-    # artists = parcoureur(with_track_uri[['track_uri']])
-    # .drop_duplicates('unique_id')
-
-    # enriches the data and indexes it
+    # enriches the data tracks and indexes it
     better_enrich(df_tableau)
 
     # rows = enrich_artist_data(rows)
