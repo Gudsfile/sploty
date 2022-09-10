@@ -310,8 +310,8 @@ def saver(df_tableau, complete_data):
     complete_data.reset_index(inplace=True, drop=True)
 
     toto = merger(df_tableau, complete_data)
-    to_write = toto[toto['is_done'] == True]
-    to_keep = toto[toto['is_done'] == False]
+    to_write = toto[toto['is_done'] is True]
+    to_keep = toto[toto['is_done'] is False]
 
     # writes data in csv file
     if not os.path.exists(RESULTS_FOLDER):
