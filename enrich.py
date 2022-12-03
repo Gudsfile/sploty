@@ -176,7 +176,6 @@ def better_enrich(df_tableau):
             except HTTPError as err:
                 print(f"WARNING - HTTPError - {err} - for artist='{row[1]['artist_name']}' track='{row[1]['track_name']}'")
                 continue
-
         checkpoint += CHUNK_SIZE
         df_tableau = saver(df_tableau, dict_all)
         dict_all = {}
