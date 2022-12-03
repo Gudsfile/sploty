@@ -1,0 +1,221 @@
+import glob
+import json
+import os
+import time
+
+import numpy as np
+import pandas as pd
+import requests
+from pandas.errors import EmptyDataError
+from requests.exceptions import HTTPError
+
+
+CONFIG_FILE = 'config.json'
+CONFIG = json.load(open(CONFIG_FILE, 'r', encoding='UTF-8'))
+
+CHUNK_SIZE = CONFIG['file']['chunk_size']
+
+# Files
+RESOURCES_FOLDER = CONFIG['file']['resources_folder']
+ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_FILE = 'AllStreamingHistoryToEnrich.csv'
+ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH = RESOURCES_FOLDER + '/' + ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_FILE
+
+YOUR_ENRICHED_STREAMING_HISTORY_FILE = 'AllEnrichedStreamingHistory.csv'
+YOUR_ENRICHED_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + '/' + YOUR_ENRICHED_STREAMING_HISTORY_FILE
+
+# Spotify's authentication and config
+SPOTIFY_CLIENT_ID = CONFIG['spotify']['client_id']
+SPOTIFY_CLIENT_SECRET = CONFIG['spotify']['client_secret']
+SPOTIFY_AUTH_URL = CONFIG['spotify']['auth_url']
+SPOTIFY_BASE_URL = CONFIG['spotify']['base_url']
+SPOTIFY_SLEEP = CONFIG['spotify']['s_sleep']
+
+auth_response = requests.post(SPOTIFY_AUTH_URL, {
+    'grant_type': 'client_credentials',
+    'client_id': SPOTIFY_CLIENT_ID,
+    'client_secret': SPOTIFY_CLIENT_SECRET,
+})
+auth_response_data = auth_response.json()
+
+ACCESS_TOKEN = auth_response_data['access_token']
+SPOTIFY_HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
+
+# Color
+class BoldColor:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+
+def chunks_iter(iterable, chunk_size):
+    """Yield successive n-sized chunks from iter."""
+    iterable = iter(iterable)
+    while True:
+        chunk = []
+        try:
+            for _ in range(chunk_size):
+                chunk.append(next(iterable))
+            yield chunk
+        except StopIteration:
+            if chunk:
+                yield chunk
+            break
+
+def do_spotify_request(url, headers, params=None):
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        print(f' -> {response.request.url}')
+        print(f" <- {response.status_code} {response.text[:200].replace(' ', '').encode('UTF-8')}")
+        response.raise_for_status()
+        return response.json()
+    except HTTPError as err:
+        if err.response.status_code == 429:
+            print(f"WARN - HTTPError - {err} (sleeping {SPOTIFY_SLEEP}s...)")
+            time.sleep(SPOTIFY_SLEEP)
+            return do_spotify_request(url, headers, params)
+        print(f"WARN - HTTPError - {err} (skipping)")
+        raise
+
+def better_get(track_name, artist_name):
+    params = [
+        ('q', artist_name + ' track:' + track_name.replace('\'', ' ')),
+        ('type', 'track'),
+        ('market', 'FR'),
+        ('limit', '1'),
+        ('offset', '0')
+    ]
+    return do_spotify_request(SPOTIFY_BASE_URL + 'search/', headers=SPOTIFY_HEADERS, params=params)
+
+def another_get(track_uris):
+    params = [
+        ('ids', ','.join(track_uris)),
+        ('type', 'track'),
+        ('market', 'FR')
+    ]
+    return do_spotify_request(SPOTIFY_BASE_URL + 'tracks/', headers=SPOTIFY_HEADERS, params=params)
+
+def merger(df1, df5):
+    df1['is_done'] = df1.track_src_id.isin(df5.track_src_id)
+    df = df1.merge(df5, on='track_src_id', how='left')
+
+    for c_x in df.columns:
+        if c_x.endswith('_x'):
+            c = c_x.removesuffix('_x')
+            c_y = c + '_y'
+            df[c] = df[c_y].where(df.is_done, df[c_x])
+    return df.loc[:, ~df.columns.str.contains('_x$|_y$')]
+
+def saver(df_tableau, complete_data):
+    sorted_cols = ['end_time', 'artist_name', 'track_name', 'ms_played', 'min_played', 'track_duration_ms', 'percentage_played', 'track_popularity', 'in_library', 'track_src_id','artist_uri','track_uri','year','month','day','hour','minute']
+
+    complete_data = pd.DataFrame.from_dict(complete_data, orient='index')
+
+    if len(complete_data) == 0:
+        return df_tableau
+
+    toto = merger(df_tableau, complete_data)
+    to_write = toto[toto['is_done'] == True][sorted_cols]
+    to_keep = toto[toto['is_done'] == False]
+    # == to prevent "KeyError: False"
+
+    # writes data in csv file
+    to_write.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode='a', header=not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH), index_label='index')
+
+    return to_keep.reset_index(drop=True)
+
+def better_enrich(df_tableau):
+    print(f'INFO - enrich track data for {len(df_tableau)} tracks')
+
+    df = df_tableau[['track_uri', 'track_name', 'artist_name', 'track_src_id', 'ms_played']].drop_duplicates('track_src_id')
+    print(f'INFO - reduce enrich for only {len(df)} tracks')
+    rows_with_track_uri = df[df['track_uri'].notna()]
+    rows_without_track_uri = df[df['track_uri'].isna()]
+
+    # if track uri is nan
+    print(f'INFO - enrich track data and uri for {len(rows_without_track_uri)} tracks')
+    dict_all = {}
+    target = len(rows_without_track_uri)
+    step = CHUNK_SIZE * 10
+    checkpoint = 0
+    for rows in chunks_iter(rows_without_track_uri.iterrows(), CHUNK_SIZE):
+        print(' ' * 40 + BoldColor.PURPLE + '[' + '-' * int(checkpoint / step) + ' ' * int(
+            (target - checkpoint) / step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
+        for row in rows:
+            try:
+                index = row[0]
+                stream = row[1]
+
+                response = better_get(stream['track_name'], stream['artist_name'])
+
+                try:
+                    track = response['tracks']['items'][0]
+                    track_uri = track['uri'].split(':')[2]
+                except IndexError as err:
+                    print(f"WARNING - IndexError - {err} - artist='{row[1]['artist_name']}' track='{row[1]['track_name']}'")
+                    continue
+
+                track_uri = track['uri'].split(':')[2]
+                artist = track['artists'][0]  # only one artist :(
+                album = track['album']
+
+                print(f'DEBUG - enrich track uri n°{index} (NaN -> {track_uri})')
+
+                stream['track_uri'] = track_uri
+                stream['artist_uri'] = artist['uri'].split(':')[2]
+                stream['track_duration_ms'] = track.get('duration_ms', None)
+                stream['track_popularity'] = track.get('popularity', None)
+                stream['percentage_played'] = round((stream.ms_played / stream.track_duration_ms)*100, 2)
+                dict_all[index] = stream
+            except HTTPError as err:
+                print(f"WARNING - HTTPError - {err} - for artist='{row[1]['artist_name']}' track='{row[1]['track_name']}'")
+                continue
+        
+        checkpoint += CHUNK_SIZE
+        df_tableau = saver(df_tableau, dict_all)
+        dict_all = {}
+
+    # if track already have an uri
+    print(f'INFO - enrich track data for {len(rows_with_track_uri)} tracks')
+    target = len(rows_with_track_uri)
+    step = CHUNK_SIZE * 10
+    checkpoint = 0
+    for rows in chunks_iter(rows_with_track_uri.iterrows(), CHUNK_SIZE):
+        print(' ' * 40 + BoldColor.PURPLE + '[' + '-' * int(checkpoint / step) + ' ' * int((target - checkpoint) / step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
+        response = another_get([row[1]['track_uri'] for row in rows])  # il doit y avoir mieux
+        for i, row in enumerate(rows):
+            index = row[0]
+            stream = row[1]
+
+            track = response['tracks'][i]
+            artist = track['artists'][0]  # only one artist :(
+            album = track['album']
+            track_uri = track['uri']
+
+            print(f'DEBUG - enrich track uri n°{index} ({track_uri})')
+
+            stream['artist_uri'] = artist['uri'].split(':')[2]
+            stream['track_duration_ms'] = track.get('duration_ms', None)
+            stream['track_popularity'] = track.get('popularity', None)
+            stream['percentage_played'] = round((stream.ms_played / stream.track_duration_ms)*100, 2)
+            dict_all[index] = stream
+        checkpoint += CHUNK_SIZE
+        df_tableau = saver(df_tableau, dict_all)
+        dict_all = {}
+
+# enriches the data tracks and indexes it
+df_stream = pd.read_csv(ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH)
+print(f'INFO - {len(df_stream)} rows to enrich')
+
+old_number_of_enriched_streams = 0 if not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH) else sum(1 for line in open(YOUR_ENRICHED_STREAMING_HISTORY_PATH))
+
+better_enrich(df_stream)
+
+new_number_of_enriched_streams = sum(1 for line in open(YOUR_ENRICHED_STREAMING_HISTORY_PATH))
+print(f'INFO - {new_number_of_enriched_streams-old_number_of_enriched_streams} tracks enriched / {len(df_stream)} rows to enrich')
