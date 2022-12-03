@@ -4,10 +4,8 @@
         "debug": true
     },
     "file": {
-        "index": "1",
         "resources_folder": "resources/my_spotify_data",
         "results_folder": "results/my_spotify_data",
-        "result_file": "result.csv",
         "chunk_size": 50
     },
     "spotify": {
