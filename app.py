@@ -249,7 +249,7 @@ def bulk_factory(df):
     for document in df:
         yield {
             '_index': ELASTIC_INDICE_NAME,
-            '_id': document['index'],
+            '_id': document.pop('index'),
             '_source': document
         }
 
@@ -294,8 +294,8 @@ def better_get(track_name, artist_name):
 
 
 def merger(df1, df5):
-    df1['is_done'] = df1.unique_id.isin(df5.unique_id)
-    df = df1.merge(df5, on='unique_id', how='left')
+    df1['is_done'] = df1.track_src_id.isin(df5.track_src_id)
+    df = df1.merge(df5, on='track_src_id', how='left')
 
     for c_x in df.columns:
         if c_x.endswith('_x'):
@@ -306,19 +306,25 @@ def merger(df1, df5):
 
 
 def saver(df_tableau, complete_data):
+    sorted_cols = ['end_time', 'artist_name', 'track_name', 'ms_played', 'min_played', 'track_duration_ms', 'percentage_played', 'track_popularity', 'in_library', 'track_src_id','artist_uri','track_uri','year','month','day','hour','minute']
+
     complete_data = pd.DataFrame.from_dict(complete_data, orient='index')
-    complete_data.reset_index(inplace=True, drop=True)
+
+    if len(complete_data) == 0:
+        return df_tableau
 
     toto = merger(df_tableau, complete_data)
-    to_write = toto[toto['is_done'] is True]
-    to_keep = toto[toto['is_done'] is False]
+    to_write = toto[toto['is_done'] == True][sorted_cols]
+    to_keep = toto[toto['is_done'] == False]
+    # == to prevent "KeyError: False"
 
     # writes data in csv file
     if not os.path.exists(RESULTS_FOLDER):
         os.mkdir(RESULTS_FOLDER)
-    to_write.to_csv(RESULTS_FOLDER + RESULT_FILE, mode='a', header=not os.path.exists(RESULTS_FOLDER + RESULT_FILE))
-    
+    to_write.to_csv(RESULTS_FOLDER + RESULT_FILE, mode='a', header=not os.path.exists(RESULTS_FOLDER + RESULT_FILE), index_label='index')
+
     if ELASTIC_IS_ENABLED:
+        to_write['index'] = to_write.index
         json_tmp = json.loads(to_write.to_json(orient='records'))
         set_multidata(ELASTIC, json_tmp)
 
@@ -328,9 +334,7 @@ def saver(df_tableau, complete_data):
 def better_enrich(df_tableau):
     print(f'INFO - enrich track data for {len(df_tableau)} tracks')
 
-    df = df_tableau[['track_uri', 'trackName', 'artistName', 'unique_id']].drop_duplicates('unique_id')
-    df = df.reset_index()
-
+    df = df_tableau[['track_uri', 'track_name', 'artist_name', 'track_src_id', 'ms_played']].drop_duplicates('track_src_id')
     print(f'INFO - reduce enrich for only {len(df)} tracks')
     rows_with_track_uri = df[df['track_uri'].notna()]
     rows_without_track_uri = df[df['track_uri'].isna()]
@@ -349,13 +353,13 @@ def better_enrich(df_tableau):
                 index = row[0]
                 stream = row[1]
 
-                response = better_get(stream['trackName'], stream['artistName'])
+                response = better_get(stream['track_name'], stream['artist_name'])
 
                 try:
                     track = response['tracks']['items'][0]
                     track_uri = track['uri'].split(':')[2]
                 except IndexError as err:
-                    print(f"WARNING - IndexError - {err}")
+                    print(f"WARNING - IndexError - {err} - artist='{row[1]['artist_name']}' track='{row[1]['track_name']}'")
                     continue
 
                 track_uri = track['uri'].split(':')[2]
@@ -368,11 +372,12 @@ def better_enrich(df_tableau):
                 stream['artist_uri'] = artist['uri'].split(':')[2]
                 stream['track_duration_ms'] = track.get('duration_ms', None)
                 stream['track_popularity'] = track.get('popularity', None)
+                stream['percentage_played'] = round((stream.ms_played / stream.track_duration_ms)*100, 2)
                 dict_all[index] = stream
             except HTTPError as err:
-                print(f"WARNING - HTTPError - {err} - for  {row}")
+                print(f"WARNING - HTTPError - {err} - for artist='{row[1]['artist_name']}' track='{row[1]['track_name']}'")
                 continue
-
+        
         checkpoint += CHUNK_SIZE
         df_tableau = saver(df_tableau, dict_all)
         dict_all = {}
@@ -399,41 +404,56 @@ def better_enrich(df_tableau):
             stream['artist_uri'] = artist['uri'].split(':')[2]
             stream['track_duration_ms'] = track.get('duration_ms', None)
             stream['track_popularity'] = track.get('popularity', None)
+            stream['percentage_played'] = round((stream.ms_played / stream.track_duration_ms)*100, 2)
             dict_all[index] = stream
         checkpoint += CHUNK_SIZE
         df_tableau = saver(df_tableau, dict_all)
         dict_all = {}
 
+def header_converter(df):
+    return df.rename(columns={'endTime': 'end_time', 'msPlayed': 'ms_played', 'artistName': 'artist_name', 'trackName': 'track_name'})
 
 def app():
-    # cerates indice
+    # creates indice
     if ELASTIC_IS_ENABLED:
         create_indice_if_not_exist(ELASTIC, ELASTIC_INDICE_NAME)
 
     # reads streaming files
     resources_files = [f for f in glob.glob(RESOURCES_FOLDER + '*/StreamingHistory*.json')]
-    df_stream = pd.concat(map(pd.read_json, resources_files)).drop_duplicates()
-    df_stream['unique_id'] = df_stream['artistName'] + ':' + df_stream['trackName']
+    df_stream = header_converter(pd.concat(map(pd.read_json, resources_files)).drop_duplicates())
+    df_stream['track_src_id'] = df_stream.artist_name + ':' + df_stream.track_name
+    df_stream['year'] = pd.DatetimeIndex(df_stream.end_time).year.map("{:04}".format)
+    df_stream['month'] = (pd.DatetimeIndex(df_stream.end_time).month).map("{:02}".format)
+    df_stream['month_name'] = pd.DatetimeIndex(df_stream.end_time).month_name()
+    df_stream['day'] = pd.DatetimeIndex(df_stream.end_time).day.map("{:02}".format)
+    df_stream['hour'] = pd.DatetimeIndex(df_stream.end_time).hour.map("{:02}".format)
+    df_stream['minute'] = pd.DatetimeIndex(df_stream.end_time).minute.map("{:02}".format)
+    df_stream['min_played'] = df_stream.ms_played / 1000 / 60
 
     # reads library files
     df_library = pd.read_json(LAST_RESOURCES_FOLDER + '/YourLibrary_tracks.json')
-    df_library['unique_id'] = df_library['artist'] + ':' + df_library['track']
-    new = df_library["uri"].str.split(":", expand=True)
+    df_library['track_src_id'] = df_library['artist'] + ':' + df_library['track']
+    new = df_library['uri'].str.split(':', expand=True)
     df_library['track_uri'] = new[2]
 
     # merges streaming and library data
     df_tableau = df_stream.copy()
-    df_tableau['in_library'] = np.where(df_tableau['unique_id'].isin(df_library['unique_id'].tolist()), True, False)
-    df_tableau = pd.merge(df_tableau, df_library[['album', 'unique_id', 'track_uri']], how='left', on=['unique_id'])
-    df_tableau = df_tableau.reset_index()
+    df_tableau['in_library'] = np.where(df_tableau['track_src_id'].isin(df_library['track_src_id'].tolist()), True, False)
+    df_tableau = pd.merge(df_tableau, df_library[['album', 'track_src_id', 'track_uri']], how='left', on=['track_src_id'])
+    df_tableau['date'] = pd.to_datetime(df_tableau.end_time)
+    df_tableau = df_tableau.sort_values('date').reset_index(drop=True).drop('date', axis=1)
 
     # get already saved data
     print(f'INFO - {len(df_tableau)} rows to enrich')
     try:
         saved_df = pd.read_csv('results/my_spotify_data_5testing_file.csv')
         print(f'INFO - {len(saved_df)} rows founds')
-        df_tableau = df_tableau[~df_tableau.unique_id.isin(saved_df.unique_id)]
+        df_tableau = df_tableau[~df_tableau.track_src_id.isin(saved_df.track_src_id)]
         print(f'INFO - only {len(df_tableau)} rows to enrich')
+        if ELASTIC_IS_ENABLED:
+            saved_df['index'] = saved_df.index
+            json_tmp = json.loads(saved_df.to_json(orient='records'))
+            set_multidata(ELASTIC, json_tmp)
     except EmptyDataError:
         print('WARN - empty backup file found')
     except FileNotFoundError:
