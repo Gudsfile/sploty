@@ -113,7 +113,7 @@ def merger(df1, df5):
     return df.loc[:, ~df.columns.str.contains('_x$|_y$')]
 
 def saver(df_tableau, complete_data):
-    sorted_cols = ['end_time', 'artist_name', 'track_name', 'ms_played', 'min_played', 'track_duration_ms', 'percentage_played', 'track_popularity', 'in_library', 'track_src_id','artist_uri','track_uri','year','month','day','hour','minute']
+    sorted_cols = ['end_time', 'artist_name', 'track_name', 'ms_played', 'min_played', 'track_duration_ms', 'percentage_played', 'track_popularity', 'in_library', 'track_src_id', 'artist_uri', 'track_uri', 'year', 'month', 'month_name', 'day', 'hour', 'minute']
 
     complete_data = pd.DataFrame.from_dict(complete_data, orient='index')
 
@@ -171,12 +171,12 @@ def better_enrich(df_tableau):
                 stream['artist_uri'] = artist['uri'].split(':')[2]
                 stream['track_duration_ms'] = track.get('duration_ms', None)
                 stream['track_popularity'] = track.get('popularity', None)
-                stream['percentage_played'] = round((stream.ms_played / stream.track_duration_ms)*100, 2)
+                stream['percentage_played'] = 0 if stream.ms_played == 0.0 else round((stream.ms_played / stream.track_duration_ms)*100, 2)
                 dict_all[index] = stream
             except HTTPError as err:
                 print(f"WARNING - HTTPError - {err} - for artist='{row[1]['artist_name']}' track='{row[1]['track_name']}'")
                 continue
-        
+
         checkpoint += CHUNK_SIZE
         df_tableau = saver(df_tableau, dict_all)
         dict_all = {}
@@ -201,7 +201,7 @@ def better_enrich(df_tableau):
             print(f'DEBUG - enrich track uri n°{index} ({track_uri})')
 
             stream['artist_uri'] = artist['uri'].split(':')[2]
-            stream['track_duration_ms'] = track.get('duration_ms', None)
+            stream['track_duration_ms'] = track.get('duration_ms', np.nan) if track.get('duration_ms', None) != 0. else np.nan
             stream['track_popularity'] = track.get('popularity', None)
             stream['percentage_played'] = round((stream.ms_played / stream.track_duration_ms)*100, 2)
             dict_all[index] = stream
