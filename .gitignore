@@ -1,9 +1,11 @@
 venv/
 
-config.json
+config.*
 .cache
 
 resources/
 results/
 *.csv
 *.json
+
+!config.default.json
