@@ -1,8 +1,6 @@
 import glob
 import json
-import os
 
-import numpy as np
 import pandas as pd
 from pandas.errors import EmptyDataError
 
@@ -10,6 +8,7 @@ from pandas.errors import EmptyDataError
 CONFIG_FILE = 'config.json'
 CONFIG = json.load(open(CONFIG_FILE, 'r', encoding='UTF-8'))
 
+# Files
 RESOURCES_FOLDER = CONFIG['file']['resources_folder']
 
 YOUR_STREAMING_HISTORY_FILES = 'StreamingHistory*.json'
@@ -24,6 +23,7 @@ ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH = RESOURCES_FOLDER + '/' + ALL_YOUR_ST
 YOUR_ENRICHED_STREAMING_HISTORY_FILE = 'AllEnrichedStreamingHistory.csv'
 YOUR_ENRICHED_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + '/' + YOUR_ENRICHED_STREAMING_HISTORY_FILE
 
+# Read track history Spotify file
 df_stream = pd.read_csv(ALL_YOUR_STREAMING_HISTORY_PATH)
 print(f'INFO - {len(df_stream)} rows to enrich')
 
@@ -36,11 +36,11 @@ try:
 
     # df_enriched_stream.to_csv('todo', mode='w', index_label='index')
     # print(f'INFO - {len(df_enriched_stream)} rows are saved at {"todo"}')
-
 except EmptyDataError:
     print(f'WARN - empty backup file found ({YOUR_ENRICHED_STREAMING_HISTORY_PATH}')
 except FileNotFoundError:
     print(f'WARN - no backup file found ({YOUR_ENRICHED_STREAMING_HISTORY_PATH}')
 
+# Save stream to enrich
 df_stream.to_csv(ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH, mode='w', index_label='index')
 print(f'INFO - {len(df_stream)} rows are saved at {ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH}')

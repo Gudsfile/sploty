@@ -5,10 +5,10 @@
     },
     "file": {
         "resources_folder": "resources/my_spotify_data",
-        "results_folder": "results/my_spotify_data",
         "chunk_size": 50
     },
     "spotify": {
+        "timeout": 10,
         "s_sleep": 60,
         "client_id": "TO BE RENSEIGNED",
         "client_secret": "TO BE RENSEIGNED",
@@ -22,12 +22,13 @@
         ],
         "username": "elastic",
         "password": "changeme",
+        "request_timeout": 10,
         "indice": {
             "name": "spotify-stream-history",
             "type": "reccord",
             "settings": {
                 "number_of_shards": 5,
-                "number_of_replicas": 1
+                "number_of_replicas": 0
             },
             "mappings": {
                 "properties": {
@@ -37,29 +38,38 @@
                     "in_library": {
                         "type": "boolean"
                     },
-                    "unique_id": {
+                    "is_unplayable": {
+                        "type": "boolean"
+                    },
+                    "track_src_id": {
                         "type": "text"
                     },
                     "album": {
                         "type": "keyword"
                     },
-                    "artistName": {
+                    "artist_name": {
                         "type": "keyword"
                     },
-                    "endTime": {
+                    "end_time": {
                         "type": "date",
                         "format": "yyyy-MM-dd HH:mm"
                     },
-                    "msPlayed": {
+                    "ms_played": {
                         "type": "long"
                     },
-                    "trackName": {
+                    "min_played": {
+                        "type": "long"
+                    },
+                    "track_name": {
                         "type": "keyword"
                     },
                     "track_uri": {
                         "type": "keyword"
                     },
                     "track_duration_ms": {
+                        "type": "long"
+                    },
+                    "percentage_played": {
                         "type": "long"
                     },
                     "track_popularity": {
@@ -69,7 +79,7 @@
                         "type": "keyword"
                     },
                     "artist_genres": {
-                        "type": "text"
+                        "type": "keyword"
                     },
                     "artist_popularity": {
                         "type": "long"
