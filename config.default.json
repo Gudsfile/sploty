@@ -5,10 +5,10 @@
     },
     "file": {
         "resources_folder": "resources/my_spotify_data",
-        "results_folder": "results/my_spotify_data",
         "chunk_size": 50
     },
     "spotify": {
+        "timeout": 10,
         "s_sleep": 60,
         "client_id": "TO BE RENSEIGNED",
         "client_secret": "TO BE RENSEIGNED",
@@ -22,6 +22,7 @@
         ],
         "username": "elastic",
         "password": "changeme",
+        "request_timeout": 10,
         "indice": {
             "name": "spotify-stream-history",
             "type": "reccord",
