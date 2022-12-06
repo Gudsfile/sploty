@@ -1,15 +1,8 @@
-import glob
 import json
-import os
-import time
 
-import numpy as np
 import pandas as pd
-import requests
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
-from pandas.errors import EmptyDataError
-from requests.exceptions import HTTPError
 
 
 CONFIG_FILE = 'config.json'
@@ -32,6 +25,7 @@ ELASTIC_INDICE_TYPE = CONFIG['elasticsearch']['indice']['type'] if ELASTIC_IS_EN
 ELASTIC_INDICE_SETTINGS = CONFIG['elasticsearch']['indice']['settings'] if ELASTIC_IS_ENABLED else None
 ELASTIC_INDICE_MAPPINGS = CONFIG['elasticsearch']['indice']['mappings'] if ELASTIC_IS_ENABLED else None
 ELASTIC = Elasticsearch(hosts=ELASTIC_HOSTS, basic_auth=ELASTIC_AUTH) if ELASTIC_IS_ENABLED else None
+ELASTIC.options(request_timeout=CONFIG['elasticsearch']['request_timeout'] if ELASTIC_IS_ENABLED else 0)
 
 
 def bulk_factory(df):
@@ -42,27 +36,22 @@ def bulk_factory(df):
             '_source': document
         }
 
-
-def set_multidata(elastic, data, request_timeout=10):
+def set_multidata(elastic, data):
     print(f' -> bulk {len(data)} documents')
-    response = helpers.bulk(elastic, bulk_factory(data), request_timeout=request_timeout)
+    response = helpers.bulk(elastic, bulk_factory(data))
     print(f' <- bulk response is {response}')
-
 
 def create_indice_if_not_exist(elastic, index):
     if elastic.indices.exists(index=index):
         print(f'INFO index {index} already exists')
     else:
         print(f'INFO index {index} does not exists')
-        request_body = {
-            'settings': ELASTIC_INDICE_SETTINGS,
-            'mappings': ELASTIC_INDICE_MAPPINGS
-        }
-        elastic.indices.create(index=index, body=request_body)
+        elastic.indices.create(index=index, settings=ELASTIC_INDICE_SETTINGS, mappings=ELASTIC_INDICE_MAPPINGS)
         print(f'INFO index {index} created')
 
 if not ELASTIC_IS_ENABLED:
     exit(0)
+
 
 df_stream = pd.read_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
 
