@@ -5,6 +5,7 @@ config.*
 
 resources/
 results/
+kibana/
 *.csv
 *.json
 
