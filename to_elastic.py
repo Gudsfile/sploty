@@ -53,13 +53,13 @@ if not ELASTIC_IS_ENABLED:
     exit(0)
 
 
-# read enriched streams
+# Read enriched streams
 df_stream = pd.read_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
 
-# creates indice
+# Create indice
 create_indice_if_not_exist(ELASTIC, ELASTIC_INDICE_NAME)
 
-# index streams
+# Index streams
 print(f'INFO - indexing {len(df_stream)} tracks')
 df_stream['index'] = df_stream.index
 json_tmp = json.loads(df_stream.to_json(orient='records'))

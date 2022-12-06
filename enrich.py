@@ -1,4 +1,3 @@
-import glob
 import json
 import os
 import time
@@ -6,7 +5,6 @@ import time
 import numpy as np
 import pandas as pd
 import requests
-from pandas.errors import EmptyDataError
 from requests.exceptions import HTTPError
 
 
@@ -29,16 +27,18 @@ SPOTIFY_CLIENT_SECRET = CONFIG['spotify']['client_secret']
 SPOTIFY_AUTH_URL = CONFIG['spotify']['auth_url']
 SPOTIFY_BASE_URL = CONFIG['spotify']['base_url']
 SPOTIFY_SLEEP = CONFIG['spotify']['s_sleep']
+SPOTIFY_TIMEOUT = CONFIG['spotify']['timeout']
 
 auth_response = requests.post(SPOTIFY_AUTH_URL, {
     'grant_type': 'client_credentials',
     'client_id': SPOTIFY_CLIENT_ID,
     'client_secret': SPOTIFY_CLIENT_SECRET,
-})
+}, timeout=SPOTIFY_TIMEOUT)
 auth_response_data = auth_response.json()
 
 ACCESS_TOKEN = auth_response_data['access_token']
 SPOTIFY_HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
+
 
 # Color
 class BoldColor:
@@ -70,7 +70,7 @@ def chunks_iter(iterable, chunk_size):
 
 def do_spotify_request(url, headers, params=None):
     try:
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=SPOTIFY_TIMEOUT)
         print(f' -> {response.request.url}')
         print(f" <- {response.status_code} {response.text[:200].replace(' ', '').encode('UTF-8')}")
         response.raise_for_status()
@@ -120,9 +120,9 @@ def saver(df_tableau, complete_data):
     if len(complete_data) == 0:
         return df_tableau
 
-    toto = merger(df_tableau, complete_data)
-    to_write = toto[toto['is_done'] == True][sorted_cols]
-    to_keep = toto[toto['is_done'] == False]
+    streams = merger(df_tableau, complete_data)
+    to_write = streams[streams['is_done'] == True][sorted_cols]
+    to_keep = streams[streams['is_done'] == False]
     # == to prevent "KeyError: False"
 
     # writes data in csv file
@@ -212,9 +212,9 @@ def better_enrich(df_tableau):
 df_stream = pd.read_csv(ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH)
 print(f'INFO - {len(df_stream)} rows to enrich')
 
-old_number_of_enriched_streams = 0 if not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH) else sum(1 for line in open(YOUR_ENRICHED_STREAMING_HISTORY_PATH))
+old_number_of_enriched_streams = 0 if not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH) else sum(1 for line in open(YOUR_ENRICHED_STREAMING_HISTORY_PATH, encoding='UTF-8'))
 
 better_enrich(df_stream)
 
-new_number_of_enriched_streams = sum(1 for line in open(YOUR_ENRICHED_STREAMING_HISTORY_PATH))
+new_number_of_enriched_streams = sum(1 for line in open(YOUR_ENRICHED_STREAMING_HISTORY_PATH, encoding='UTF-8'))
 print(f'INFO - {new_number_of_enriched_streams-old_number_of_enriched_streams} tracks enriched / {len(df_stream)} rows to enrich')
