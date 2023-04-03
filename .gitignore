@@ -4,9 +4,9 @@ config.*
 .cache
 
 resources/
-results/
-kibana/
+backup/
 *.csv
 *.json
+*.ndjson
 
 !config.default.json

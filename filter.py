@@ -41,6 +41,10 @@ except EmptyDataError:
 except FileNotFoundError:
     print(f'WARN - no backup file found ({YOUR_ENRICHED_STREAMING_HISTORY_PATH}')
 
+# Drop NaN row
+df_stream = df_stream[df_stream['track_uri'].notna()]
+print(f'INFO - {len(df_stream)} rows to enrich without empty track_uri')
+
 # Save stream to enrich
 df_stream.to_csv(ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH, mode='w', index_label='index')
 print(f'INFO - {len(df_stream)} rows are saved at {ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH}')
