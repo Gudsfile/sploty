@@ -4,7 +4,7 @@
         "debug": true
     },
     "file": {
-        "resources_folder": "resources/my_spotify_data",
+        "resources_folder": "resources/MyData",
         "chunk_size": 50
     },
     "spotify": {
@@ -16,113 +16,14 @@
         "base_url": "https://api.spotify.com/v1/"
     },
     "elasticsearch": {
-        "enable": false,
         "hosts": [
             "http://localhost:9200"
         ],
         "username": "elastic",
         "password": "changeme",
         "request_timeout": 10,
-        "indice": {
-            "name": "spotify-stream-history",
-            "type": "reccord",
-            "settings": {
-                "number_of_shards": 5,
-                "number_of_replicas": 0
-            },
-            "mappings": {
-                "properties": {
-                    "@timestamp": {
-                        "type": "date"
-                    },
-                    "in_library": {
-                        "type": "boolean"
-                    },
-                    "is_unplayable": {
-                        "type": "boolean"
-                    },
-                    "track_src_id": {
-                        "type": "text"
-                    },
-                    "album": {
-                        "type": "keyword"
-                    },
-                    "artist_name": {
-                        "type": "keyword"
-                    },
-                    "end_time": {
-                        "type": "date",
-                        "format": "yyyy-MM-dd HH:mm"
-                    },
-                    "ms_played": {
-                        "type": "long"
-                    },
-                    "min_played": {
-                        "type": "long"
-                    },
-                    "track_name": {
-                        "type": "keyword"
-                    },
-                    "track_uri": {
-                        "type": "keyword"
-                    },
-                    "track_duration_ms": {
-                        "type": "long"
-                    },
-                    "percentage_played": {
-                        "type": "long"
-                    },
-                    "track_popularity": {
-                        "type": "long"
-                    },
-                    "artist_uri": {
-                        "type": "keyword"
-                    },
-                    "artist_genres": {
-                        "type": "keyword"
-                    },
-                    "artist_popularity": {
-                        "type": "long"
-                    },
-                    "audio_features": {
-                        "properties": {
-                            "danceability": {
-                                "type": "integer"
-                            },
-                            "energy": {
-                                "type": "integer"
-                            },
-                            "key": {
-                                "type": "integer"
-                            },
-                            "loudness": {
-                                "type": "integer"
-                            },
-                            "mode": {
-                                "type": "integer"
-                            },
-                            "speechiness": {
-                                "type": "integer"
-                            },
-                            "acousticness": {
-                                "type": "integer"
-                            },
-                            "instrumentalness": {
-                                "type": "integer"
-                            },
-                            "liveness": {
-                                "type": "integer"
-                            },
-                            "valence": {
-                                "type": "integer"
-                            },
-                            "tempo": {
-                                "type": "integer"
-                            }
-                        }
-                    }
-                }
-            }
+        "index": {
+            "name": "spotify-stream-history"
         }
     }
 }
