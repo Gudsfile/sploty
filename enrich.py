@@ -83,16 +83,6 @@ def do_spotify_request(url, headers, params=None):
         print(f"WARN - HTTPError - {err} (skipping)")
         raise
 
-def better_get(track_name, artist_name):
-    params = [
-        ('q', artist_name + ' track:' + track_name.replace('\'', ' ')),
-        ('type', 'track'),
-        ('market', 'FR'),
-        ('limit', '1'),
-        ('offset', '0')
-    ]
-    return do_spotify_request(SPOTIFY_BASE_URL + 'search/', headers=SPOTIFY_HEADERS, params=params)
-
 def another_get(track_uris):
     params = [
         ('ids', ','.join(track_uris)),
