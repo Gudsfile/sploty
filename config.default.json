@@ -25,5 +25,8 @@
         "index": {
             "name": "spotify-stream-history-v1"
         }
+    },
+    "tinydb": {
+        "track_audio_features": "resources/db/spotify/track_audio_features.json"
     }
 }

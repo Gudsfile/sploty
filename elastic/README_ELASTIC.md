@@ -45,7 +45,35 @@ PUT _ingest/pipeline/spotify-stream-pipeline
   {"rename": { "field": "track_audio_feature_tempo", "target_field": "audio_features.tempo", "ignore_missing": true }},
   {"rename": { "field": "track_audio_feature_time_signature", "target_field": "audio_features.time_signature", "ignore_missing": true }},
   {"remove": { "field": ["track_src_id", "location"], "ignore_missing": true }},
-  {"user_agent": { "field": "stream_context.user_agent_decrypted", "ignore_missing": true }}
+  {"user_agent": { "field": "stream_context.user_agent_decrypted", "ignore_missing": true }},
+  {
+    "script": {
+      "source": """
+      String platform = ctx['stream_context']['platform'];
+      String lcp = platform.toLowerCase();
+      if (lcp.startsWith('ios') || lcp.startsWith('partner ios_sdk')) {
+          platform = 'iOS';
+      } else if (lcp.startsWith('os x') || lcp.startsWith('osx')) {
+          platform = 'OS X';
+      } else if (lcp.startsWith('partner sonos_')) {
+          platform = 'Sonos';
+      } else if (lcp.startsWith('partner google cast_tv') || lcp.startsWith('partner google cast')) {
+          platform = 'Chromecast';
+      } else if (lcp.startsWith('partner android_tv')) {
+          platform = 'Android TV';
+      } else if (lcp.startsWith('android os') || lcp.startsWith('android [arm 0]')|| lcp.startsWith('android-tablet os')) {
+          platform = 'Android OS';
+      } else if (lcp.startsWith('webplayer') || lcp.startsWith('web_player') || lcp.startsWith('partner spotify web_player')) {
+          platform = 'WebPlayer';
+      } else if (lcp.startsWith('partner webos_tv') || lcp.startsWith('WebOs TV')) {
+          platform = 'WebOs TV';
+      } else if (lcp.startsWith('windows')) {
+          platform = 'Windows';
+      }
+      ctx['stream_context']['normalized_platform'] = platform
+      """
+    }
+  }
   ]
 }
 ```

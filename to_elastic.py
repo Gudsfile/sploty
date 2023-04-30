@@ -74,6 +74,18 @@ df_stream = df_stream.rename(columns={
     'incognito_mode': 'stream_incognito_mode',
     'month_name': 'month_name',
     'id': 'id',
+    'danceability': 'track_audio_feature_danceability',
+    'energy': 'track_audio_feature_energy',
+    'key': 'track_audio_feature_key',
+    'loudness': 'track_audio_feature_loudness',
+    'mode': 'track_audio_feature_mode',
+    'speechiness': 'track_audio_feature_speechiness',
+    'acousticness': 'track_audio_feature_acousticness',
+    'instrumentalness': 'track_audio_feature_instrumentalness',
+    'liveness': 'track_audio_feature_liveness',
+    'valence': 'track_audio_feature_valence',
+    'tempo': 'track_audio_feature_tempo',
+    'time_signature': 'track_audio_feature_time_signature',
     })
 
 df_stream = df_stream.drop(['track_src_id'], axis=1)
