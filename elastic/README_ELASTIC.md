@@ -8,190 +8,73 @@
 PUT _ingest/pipeline/spotify-stream-pipeline
 {
   "processors": [
+  {"rename": { "field": "artist_name", "target_field": "artist.name", "ignore_missing": true }},
+  {"rename": { "field": "artist_uri", "target_field": "artist.uri", "ignore_missing": true }},
+  {"rename": { "field": "artist_genres", "target_field": "artist.genres", "ignore_missing": true }},
+  {"rename": { "field": "artist_popularity", "target_field": "artist.popularity", "ignore_missing": true }},
+  {"rename": { "field": "track_name", "target_field": "track.name", "ignore_missing": true }},
+  {"rename": { "field": "track_uri", "target_field": "track.uri", "ignore_missing": true }},
+  {"rename": { "field": "track_duration_ms", "target_field": "track.duration_ms", "ignore_missing": true }},
+  {"rename": { "field": "track_popularity", "target_field": "track.popularity", "ignore_missing": true }},
+  {"rename": { "field": "track_is_in_library", "target_field": "track.is_in_library", "ignore_missing": true }},
+  {"rename": { "field": "track_is_unplayable", "target_field": "track.is_unplayable", "ignore_missing": true }},
+  {"rename": { "field": "album_uri", "target_field": "album.uri", "ignore_missing": true }},
+  {"rename": { "field": "stream_username", "target_field": "stream_context.username", "ignore_missing": true }},
+  {"rename": { "field": "stream_platform", "target_field": "stream_context.platform", "ignore_missing": true }},
+  {"rename": { "field": "stream_conn_country", "target_field": "stream_context.conn_country", "ignore_missing": true }},
+  {"rename": { "field": "stream_ip_addr_decrypted", "target_field": "stream_context.ip_addr_decrypted", "ignore_missing": true }},
+  {"rename": { "field": "stream_user_agent_decrypted", "target_field": "stream_context.user_agent_decrypted", "ignore_missing": true }},
+  {"rename": { "field": "stream_album_name", "target_field": "album.name", "ignore_missing": true }},
+  {"rename": { "field": "stream_reason_start", "target_field": "stream_context.reason_start", "ignore_missing": true }},
+  {"rename": { "field": "stream_reason_end", "target_field": "stream_context.reason_end", "ignore_missing": true }},
+  {"rename": { "field": "stream_shuffle", "target_field": "stream_context.shuffle", "ignore_missing": true }},
+  {"rename": { "field": "stream_skipped", "target_field": "stream_context.skipped", "ignore_missing": true }},
+  {"rename": { "field": "stream_offline", "target_field": "stream_context.offline", "ignore_missing": true }},
+  {"rename": { "field": "stream_offline_timestamp", "target_field": "stream_context.offline_timestamp", "ignore_missing": true }},
+  {"rename": { "field": "stream_incognito_mode", "target_field": "stream_context.incognito_mode", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_danceability", "target_field": "audio_features.danceability", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_energy", "target_field": "audio_features.energy", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_key", "target_field": "audio_features.key", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_loudness", "target_field": "audio_features.loudness", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_mode", "target_field": "audio_features.mode", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_speechiness", "target_field": "audio_features.speechiness", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_acousticness", "target_field": "audio_features.acousticness", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_instrumentalness", "target_field": "audio_features.instrumentalness", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_liveness", "target_field": "audio_features.liveness", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_valence", "target_field": "audio_features.valence", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_tempo", "target_field": "audio_features.tempo", "ignore_missing": true }},
+  {"rename": { "field": "track_audio_feature_time_signature", "target_field": "audio_features.time_signature", "ignore_missing": true }},
+  {"remove": { "field": ["track_src_id", "location"], "ignore_missing": true }},
+  {"user_agent": { "field": "stream_context.user_agent_decrypted", "ignore_missing": true }},
   {
-    "rename": {
-      "field": "artist_name",
-      "target_field": "artist.name",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "artist_uri",
-      "target_field": "artist.uri",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "artist_genres",
-      "target_field": "artist.genres",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "artist_popularity",
-      "target_field": "artist.popularity",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "track_name",
-      "target_field": "track.name",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "track_uri",
-      "target_field": "track.uri",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "track_duration_ms",
-      "target_field": "track.duration_ms",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "track_popularity",
-      "target_field": "track.popularity",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "track_is_in_library",
-      "target_field": "track.is_in_library",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "track_is_unplayable",
-      "target_field": "track.is_unplayable",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "album_uri",
-      "target_field": "album.uri",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_username",
-      "target_field": "stream_context.username",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_platform",
-      "target_field": "stream_context.platform",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_conn_country",
-      "target_field": "stream_context.conn_country",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_ip_addr_decrypted",
-      "target_field": "stream_context.ip_addr_decrypted",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_user_agent_decrypted",
-      "target_field": "stream_context.user_agent_decrypted",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_album_name",
-      "target_field": "album.name",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_reason_start",
-      "target_field": "stream_context.reason_start",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_reason_end",
-      "target_field": "stream_context.reason_end",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_shuffle",
-      "target_field": "stream_context.shuffle",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_skipped",
-      "target_field": "stream_context.skipped",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_offline",
-      "target_field": "stream_context.offline",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_offline_timestamp",
-      "target_field": "stream_context.offline_timestamp",
-      "ignore_missing": true
-    }
-  },
-  {
-    "rename": {
-      "field": "stream_incognito_mode",
-      "target_field": "stream_context.incognito_mode",
-      "ignore_missing": true
-    }
-  },
-  {
-    "remove": {
-      "field": [
-        "track_src_id",
-        "location"
-      ],
-      "ignore_missing": true
-    }
-  },
-  {
-    "user_agent": {
-      "field": "stream_context.user_agent_decrypted",
-      "ignore_missing": true
+    "script": {
+      "source": """
+      String platform = ctx['stream_context']['platform'];
+      String lcp = platform.toLowerCase();
+      if (lcp.startsWith('ios') || lcp.startsWith('partner ios_sdk')) {
+          platform = 'iOS';
+      } else if (lcp.startsWith('os x') || lcp.startsWith('osx')) {
+          platform = 'OS X';
+      } else if (lcp.startsWith('partner sonos_')) {
+          platform = 'Sonos';
+      } else if (lcp.startsWith('partner google cast_tv') || lcp.startsWith('partner google cast')) {
+          platform = 'Chromecast';
+      } else if (lcp.startsWith('partner android_tv')) {
+          platform = 'Android TV';
+      } else if (lcp.startsWith('android os') || lcp.startsWith('android [arm 0]')|| lcp.startsWith('android-tablet os')) {
+          platform = 'Android OS';
+      } else if (lcp.startsWith('webplayer') || lcp.startsWith('web_player') || lcp.startsWith('partner spotify web_player')) {
+          platform = 'WebPlayer';
+      } else if (lcp.startsWith('partner webos_tv') || lcp.startsWith('WebOs TV')) {
+          platform = 'WebOs TV';
+      } else if (lcp.startsWith('windows')) {
+          platform = 'Windows';
+      }
+      ctx['stream_context']['normalized_platform'] = platform
+      """
     }
   }
-]
+  ]
 }
 ```
 
@@ -202,158 +85,75 @@ PUT _ingest/pipeline/spotify-stream-pipeline
 ```json
 PUT _component_template/spotify-stream-mapping
 {
-    "template": {
-      "mappings": {
-
-    "properties": {
-      "audio_features": {
-        "type": "object",
-        "properties": {
-          "mode": {
-            "type": "integer"
-          },
-          "acousticness": {
-            "type": "integer"
-          },
-          "loudness": {
-            "type": "integer"
-          },
-          "liveness": {
-            "type": "integer"
-          },
-          "tempo": {
-            "type": "integer"
-          },
-          "valence": {
-            "type": "integer"
-          },
-          "instrumentalness": {
-            "type": "integer"
-          },
-          "danceability": {
-            "type": "integer"
-          },
-          "key": {
-            "type": "integer"
-          },
-          "speechiness": {
-            "type": "integer"
-          },
-          "energy": {
-            "type": "integer"
+  "template": {
+    "mappings": {
+      "properties": {
+        "audio_features": {
+          "type": "object",
+          "properties": {
+            "mode": {"type": "integer"},
+            "acousticness": {"type": "integer"},
+            "loudness": {"type": "integer"},
+            "liveness": {"type": "integer"},
+            "tempo": {"type": "integer"},
+            "valence": {"type": "integer"},
+            "instrumentalness": {"type": "integer"},
+            "danceability": {"type": "integer"},
+            "key": {"type": "integer"},
+            "speechiness": {"type": "integer"},
+            "energy": {"type": "integer"}
           }
-        }
-      },
-      "month_name": {
-        "type": "keyword"
-      },
-      "stream_context": {
-        "properties": {
-          "offline_timestamp": {
-            "type": "date"
-          },
-          "user_agent_decrypted": {
-            "type": "text"
-          },
-          "offline": {
-            "type": "boolean"
-          },
-          "reason_end": {
-            "type": "keyword"
-          },
-          "ip_addr_decrypted": {
-            "type": "ip"
-          },
-          "reason_start": {
-            "type": "keyword"
-          },
-          "conn_country": {
-            "type": "keyword"
-          },
-          "shuffle": {
-            "type": "boolean"
-          },
-          "incognito_mode": {
-            "type": "boolean"
-          },
-          "platform": {
-            "type": "keyword"
-          },
-          "username": {
-            "type": "keyword"
-          },
-          "skipped": {
-            "type": "boolean"
+        },
+        "stream_context": {
+          "properties": {
+            "offline_timestamp": {"type": "date"},
+            "user_agent_decrypted": {"type": "text"},
+            "offline": {"type": "boolean"},
+            "reason_end": {"type": "keyword"},
+            "ip_addr_decrypted": {"type": "ip"},
+            "reason_start": {"type": "keyword"},
+            "conn_country": {"type": "keyword"},
+            "shuffle": {"type": "boolean"},
+            "incognito_mode": {"type": "boolean"},
+            "platform": {"type": "text"},
+            "normalized_platform": {"type": "keyword"},
+            "username": {"type": "keyword"},
+            "skipped": {"type": "boolean"}
           }
-        }
-      },
-      "day_name": {
-        "type": "keyword"
-      },
-      "ms_played": {
-        "type": "long"
-      },
-      "artist": {
-        "properties": {
-          "genres": {
-            "type": "text"
-          },
-          "popularity": {
-            "type": "long"
-          },
-          "name": {
-            "type": "keyword"
-          },
-          "uri": {
-            "type": "keyword"
+        },
+        "artist": {
+          "properties": {
+            "genres": {"type": "text"},
+            "popularity": {"type": "long"},
+            "name": {"type": "keyword"},
+            "uri": {"type": "keyword" }
           }
-        }
-      },
-      "min_played": {
-        "type": "long"
-      },
-      "album": {
-        "properties": {
-          "name": {
-            "type": "keyword"
-          },
-          "uri": {
-            "type": "keyword"
+        },
+        "album": {
+          "properties": {
+            "name": {"type": "keyword"},
+            "uri": {"type": "keyword" }
           }
-        }
-      },
-      "end_time": {
-        "format": "yyyy-MM-dd'T'HH:mm:ss'Z'",
-        "type": "date"
-      },
-      "percentage_played": {
-        "type": "long"
-      },
-      "track": {
-        "properties": {
-          "duration_ms": {
-            "type": "long"
-          },
-          "popularity": {
-            "type": "long"
-          },
-          "name": {
-            "type": "keyword"
-          },
-          "uri": {
-            "type": "keyword"
-          },
-          "is_in_library": {
-            "type": "boolean"
-          },
-          "is_unplayable": {
-            "type": "boolean"
+        },
+        "track": {
+          "properties": {
+            "duration_ms": {"type": "long"},
+            "popularity": {"type": "long"},
+            "name": {"type": "keyword"},
+            "uri": {"type": "keyword"},
+            "is_in_library": {"type": "boolean"},
+            "is_unplayable": {"type": "boolean" }
           }
-        }
+        },
+        "end_time": {"format": "yyyy-MM-dd'T'HH:mm:ss'Z'", "type": "date"},
+        "percentage_played": {"type": "long"},
+        "day_name": {"type": "keyword"},
+        "month_name": {"type": "keyword"},
+        "ms_played": {"type": "long"},
+        "min_played": {"type": "long"}
       }
     }
   }
-    }
 }
 ```
 
