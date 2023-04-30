@@ -23,7 +23,7 @@
         "password": "changeme",
         "request_timeout": 10,
         "index": {
-            "name": "spotify-stream-history"
+            "name": "spotify-stream-history-v1"
         }
     }
 }
