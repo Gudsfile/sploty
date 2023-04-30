@@ -41,10 +41,11 @@ df_stream['day'] = pd.DatetimeIndex(df_stream.end_time).day.map("{:02}".format)
 df_stream['hour'] = pd.DatetimeIndex(df_stream.end_time).hour.map("{:02}".format)
 df_stream['minute'] = pd.DatetimeIndex(df_stream.end_time).minute.map("{:02}".format)
 df_stream['min_played'] = df_stream.ms_played / 1000 / 60
+df_stream['id'] = df_stream.end_time + ':' + df_stream.track_uri
 
 df_stream['date'] = pd.to_datetime(df_stream.end_time)
 df_stream = df_stream.sort_values('date').reset_index(drop=True).drop('date', axis=1)
 
 # Save stream history
-df_stream.to_csv(ALL_YOUR_STREAMING_HISTORY_PATH, mode='w', index_label='index')
+df_stream.to_csv(ALL_YOUR_STREAMING_HISTORY_PATH, mode='w', index=False)
 print(f'INFO - {len(df_stream)} rows are saved at {ALL_YOUR_STREAMING_HISTORY_PATH}')

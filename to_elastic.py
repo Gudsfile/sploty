@@ -27,7 +27,7 @@ def bulk_factory(df, index_name):
     for document in df:
         yield {
             '_index': index_name,
-            '_id': document.pop('index'),
+            '_id': document.pop('id'),
             '_source': document
         }
 
@@ -73,6 +73,7 @@ df_stream = df_stream.rename(columns={
     'offline_timestamp': 'stream_offline_timestamp',
     'incognito_mode': 'stream_incognito_mode',
     'month_name': 'month_name',
+    'id': 'id',
     })
 
 df_stream = df_stream.drop(['track_src_id'], axis=1)
@@ -81,7 +82,6 @@ df_stream = df_stream.drop(['stream_skipped'], axis=1) # todo fix error
 
 # Index streams
 print(f'INFO - indexing {len(df_stream)} tracks to {ELASTIC_INDEX_NAME}')
-df_stream['index'] = df_stream.index
 json_tmp = json.loads(df_stream.to_json(orient='records'))
 print(json_tmp[0])
 set_multidata(ELASTIC, json_tmp, ELASTIC_INDEX_NAME)
