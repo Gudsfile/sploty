@@ -19,6 +19,10 @@ RESOURCES_FOLDER = CONFIG['file']['resources_folder']
 ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_FILE = 'AllStreamingHistoryToEnrich.csv'
 ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH = RESOURCES_FOLDER + '/' + ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_FILE
 
+# Some rows are already enriched with audio features, some aren't
+YOUR_ENRICHED_STREAMING_HISTORY_FILE = 'AllEnrichedStreamingHistory.csv'
+YOUR_ENRICHED_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + '/' + YOUR_ENRICHED_STREAMING_HISTORY_FILE
+
 # Spotify's authentication and config
 SPOTIFY_CLIENT_ID = CONFIG['spotify']['client_id']
 SPOTIFY_CLIENT_SECRET = CONFIG['spotify']['client_secret']
@@ -92,6 +96,15 @@ def insertEnrichedTracks(db, tracks_uri, chunk_size):
         track_audio_features_without_none_value = [taf for taf in track_audio_features if taf]
         insertInDb(db, track_audio_features_without_none_value)
 
+def completes_streams_with_audio_features(df_streams, df_audio_features):
+    df_completed_streams = df_streams.merge(df_audio_features, left_on='track_uri', right_on='id', how='left')
+    # values initial col with new one if it is na
+    for col_x in list(filter(lambda x: x.endswith('_x'), df_completed_streams.columns.to_list())):
+        col = col_x[:-2]
+        col_y = col_x[:-1] + 'y'
+        df_completed_streams[col] = df_completed_streams[col_x].fillna(df_completed_streams[col_y])
+        df_completed_streams = df_completed_streams.drop([col_x, col_y], axis=1)
+    return df_completed_streams
 
 """
 # TODO clean this part
@@ -130,15 +143,10 @@ track_uris_failed_to_get = audio_feature_uris_to_get.difference(track_uris_from_
 print(f'INFO - {len(track_uris_from_db)} uris for which the audio features are now retrieved')
 print(f'INFO - {len(track_uris_failed_to_get)} uris for which the audio features could not be recovered')
 
-#########
+# add audio feature to rows that do not have it
+df_enriched_streams = pd.read_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
+df_audio_features = pd.DataFrame(DB.all())
 
-# TODO log this part
-YOUR_ENRICHED_STREAMING_HISTORY_FILE = 'AllEnrichedStreamingHistory.csv'
-YOUR_ENRICHED_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + '/' + YOUR_ENRICHED_STREAMING_HISTORY_FILE
-df_already_enriched = pd.read_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
-
-taf = pd.DataFrame(DB.all())
-taf.drop(['type', 'uri', 'track_href', 'analysis_url', 'duration_ms'], axis=1)
-
-df_wey = df_already_enriched.join(taf.set_index('id'), on='track_uri')
-df_wey.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode='w', index=False)
+df_completed_streams = completes_streams_with_audio_features(df_enriched_streams, df_audio_features)
+df_completed_streams.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode='w', index=False)
+print(f'INFO - {len(df_completed_streams)} rows are re-saved at {YOUR_ENRICHED_STREAMING_HISTORY_PATH} with audio features completed')
