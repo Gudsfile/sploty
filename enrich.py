@@ -206,8 +206,8 @@ def better_enrich(df_tableau):
 
 def number_of_lines(file_path: str):
     if os.path.exists(file_path):
-        with open(file_path, "r", encoding="UTF-8") as file:
-            return sum(1 for _ in file)
+        with open(file_path, "r", encoding="UTF-8") as f:
+            return sum(1 for _ in f)
     return 0
 
 
