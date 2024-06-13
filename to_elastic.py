@@ -4,7 +4,8 @@ import pandas as pd
 from elasticsearch import Elasticsearch, helpers
 
 CONFIG_FILE = "config.json"
-CONFIG = json.load(open(CONFIG_FILE, "r", encoding="UTF-8"))
+with open(CONFIG_FILE, "r", encoding="utf8") as file:
+    CONFIG = json.load(file.read())
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
 
