@@ -1,6 +1,9 @@
-.cache
-*.csv
-results/
-resources/
-to_grafana/
 venv/
+
+config.json
+.cache
+
+resources/
+results/
+*.csv
+*.json
