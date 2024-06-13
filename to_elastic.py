@@ -90,7 +90,7 @@ df_stream = df_stream.drop(["minute", "hour", "day", "month", "year"], axis=1)
 df_stream = df_stream.drop(["stream_skipped"], axis=1)  # todo fix error
 
 # Index streams
-print(json_tmp[0])
 print(f"INFO - indexing {len(df_stream)} tracks to {ELASTIC_INDEX_NAME}")
 json_tmp = json.loads(df_stream.to_json(orient="records"))
+print(json_tmp[-1])
 set_multidata(ELASTIC, json_tmp, ELASTIC_INDEX_NAME)
