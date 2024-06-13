@@ -114,6 +114,7 @@ def merger(df1, df5):
 
 def saver(df_tableau, complete_data):
     sorted_cols = [
+        'id',
         'end_time',
         'artist_name',
         'track_name',
@@ -158,7 +159,7 @@ def saver(df_tableau, complete_data):
     # == to prevent "KeyError: False"
 
     # writes data in csv file
-    to_write.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode='a', header=not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH), index_label='index')
+    to_write.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode='a', header=not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH), index=False)
 
     return to_keep.reset_index(drop=True)
 
