@@ -16,51 +16,72 @@ YOUR_ENRICHED_STREAMING_HISTORY_FILE = 'AllEnrichedStreamingHistory.csv'
 YOUR_ENRICHED_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + '/' + YOUR_ENRICHED_STREAMING_HISTORY_FILE
 
 # Elastic authentication and config
-ELASTIC_IS_ENABLED = CONFIG['elasticsearch']['enable']
-ELASTIC_HOSTS = CONFIG['elasticsearch']['hosts'] if ELASTIC_IS_ENABLED else None
-ELASTIC_AUTH = (
-CONFIG['elasticsearch']['username'], CONFIG['elasticsearch']['password']) if ELASTIC_IS_ENABLED else None
-ELASTIC_INDICE_NAME = CONFIG['elasticsearch']['indice']['name'] if ELASTIC_IS_ENABLED else None
-ELASTIC_INDICE_TYPE = CONFIG['elasticsearch']['indice']['type'] if ELASTIC_IS_ENABLED else None
-ELASTIC_INDICE_SETTINGS = CONFIG['elasticsearch']['indice']['settings'] if ELASTIC_IS_ENABLED else None
-ELASTIC_INDICE_MAPPINGS = CONFIG['elasticsearch']['indice']['mappings'] if ELASTIC_IS_ENABLED else None
-ELASTIC = Elasticsearch(hosts=ELASTIC_HOSTS, basic_auth=ELASTIC_AUTH) if ELASTIC_IS_ENABLED else None
-ELASTIC.options(request_timeout=CONFIG['elasticsearch']['request_timeout'] if ELASTIC_IS_ENABLED else 0)
+ELASTIC_HOSTS = CONFIG['elasticsearch']['hosts']
+ELASTIC_AUTH = (CONFIG['elasticsearch']['username'], CONFIG['elasticsearch']['password'])
+ELASTIC_INDEX_NAME = CONFIG['elasticsearch']['index']['name']
+ELASTIC = Elasticsearch(hosts=ELASTIC_HOSTS, basic_auth=ELASTIC_AUTH)
+ELASTIC.options(request_timeout=CONFIG['elasticsearch']['request_timeout'])
 
 
-def bulk_factory(df):
+def bulk_factory(df, index_name):
     for document in df:
         yield {
-            '_index': ELASTIC_INDICE_NAME,
+            '_index': index_name,
             '_id': document.pop('index'),
             '_source': document
         }
 
-def set_multidata(elastic, data):
+def set_multidata(elastic, data, index_name):
     print(f' -> bulk {len(data)} documents')
-    response = helpers.bulk(elastic, bulk_factory(data))
+    response = helpers.bulk(elastic, bulk_factory(data, index_name), raise_on_error=False)
     print(f' <- bulk response is {response}')
-
-def create_indice_if_not_exist(elastic, index):
-    if elastic.indices.exists(index=index):
-        print(f'INFO index {index} already exists')
-    else:
-        print(f'INFO index {index} does not exists')
-        elastic.indices.create(index=index, settings=ELASTIC_INDICE_SETTINGS, mappings=ELASTIC_INDICE_MAPPINGS)
-        print(f'INFO index {index} created')
-
-if not ELASTIC_IS_ENABLED:
-    exit(0)
 
 
 # Read enriched streams
 df_stream = pd.read_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
 
-# Create indice
-create_indice_if_not_exist(ELASTIC, ELASTIC_INDICE_NAME)
+# Rename columns
+df_stream = df_stream.rename(columns={
+    'end_time': 'end_time',
+    'ms_played': 'ms_played',
+    'min_played': 'min_played',
+    'percentage_played': 'percentage_played',
+    'track_uri': 'track_uri',
+    'track_name': 'track_name',
+    'track_duration_ms': 'track_duration_ms',
+    'track_popularity': 'track_popularity',
+    'track_is_in_library': 'track_is_in_library',
+    'track_is_unplayable': 'track_is_unplayable',
+    'artist_uri': 'artist_uri',
+    'artist_name': 'artist_name',
+    'artist_genres': 'artist_genres',
+    'artist_popularity': 'artist_popularity',
+    'album_uri': 'album_uri',
+    'audio_features': 'audio_features',
+    'stream_context': 'stream_context',
+    'username': 'stream_username',
+    'platform': 'stream_platform',
+    'conn_country': 'stream_conn_country',
+    'ip_addr_decrypted': 'stream_ip_addr_decrypted',
+    'user_agent_decrypted': 'stream_user_agent_decrypted',
+    'album_name': 'stream_album_name',
+    'reason_start': 'stream_reason_start',
+    'reason_end': 'stream_reason_end',
+    'shuffle': 'stream_shuffle',
+    'skipped': 'stream_skipped',
+    'offline': 'stream_offline',
+    'offline_timestamp': 'stream_offline_timestamp',
+    'incognito_mode': 'stream_incognito_mode',
+    'month_name': 'month_name',
+    })
+
+df_stream = df_stream.drop(['track_src_id'], axis=1)
+df_stream = df_stream.drop(['minute', 'hour', 'day', 'month', 'year'], axis=1)
+df_stream = df_stream.drop(['stream_skipped'], axis=1) # todo fix error
 
 # Index streams
-print(f'INFO - indexing {len(df_stream)} tracks')
+print(f'INFO - indexing {len(df_stream)} tracks to {ELASTIC_INDEX_NAME}')
 df_stream['index'] = df_stream.index
 json_tmp = json.loads(df_stream.to_json(orient='records'))
-set_multidata(ELASTIC, json_tmp)
+print(json_tmp[0])
+set_multidata(ELASTIC, json_tmp, ELASTIC_INDEX_NAME)

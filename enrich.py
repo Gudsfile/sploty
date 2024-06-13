@@ -113,7 +113,39 @@ def merger(df1, df5):
     return df.loc[:, ~df.columns.str.contains('_x$|_y$')]
 
 def saver(df_tableau, complete_data):
-    sorted_cols = ['end_time', 'artist_name', 'track_name', 'ms_played', 'min_played', 'track_duration_ms', 'percentage_played', 'track_popularity', 'in_library', 'track_src_id', 'artist_uri', 'track_uri', 'year', 'month', 'month_name', 'day', 'hour', 'minute']
+    sorted_cols = [
+        'end_time',
+        'artist_name',
+        'track_name',
+        'ms_played',
+        'min_played',
+        'track_duration_ms',
+        'percentage_played',
+        'track_popularity',
+        # 'in_library',
+        'track_src_id',
+        'artist_uri',
+        'track_uri',
+        'year',
+        'month',
+        'month_name',
+        'day',
+        'hour',
+        'minute',
+        'username',
+        'platform',
+        'conn_country',
+        'ip_addr_decrypted',
+        'user_agent_decrypted',
+        'album_name',
+        'reason_start',
+        'reason_end',
+        'shuffle',
+        'skipped',
+        'offline',
+        'offline_timestamp',
+        'incognito_mode'
+        ]
 
     complete_data = pd.DataFrame.from_dict(complete_data, orient='index')
 
@@ -135,57 +167,12 @@ def better_enrich(df_tableau):
 
     df = df_tableau[['track_uri', 'track_name', 'artist_name', 'track_src_id', 'ms_played']].drop_duplicates('track_src_id')
     print(f'INFO - reduce enrich for only {len(df)} tracks')
-    rows_with_track_uri = df[df['track_uri'].notna()]
-    rows_without_track_uri = df[df['track_uri'].isna()]
 
-    # if track uri is nan
-    print(f'INFO - enrich track data and uri for {len(rows_without_track_uri)} tracks')
     dict_all = {}
-    target = len(rows_without_track_uri)
+    target = len(df)
     step = CHUNK_SIZE * 10
     checkpoint = 0
-    for rows in chunks_iter(rows_without_track_uri.iterrows(), CHUNK_SIZE):
-        print(' ' * 40 + BoldColor.PURPLE + '[' + '-' * int(checkpoint / step) + ' ' * int(
-            (target - checkpoint) / step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
-        for row in rows:
-            try:
-                index = row[0]
-                stream = row[1]
-
-                response = better_get(stream['track_name'], stream['artist_name'])
-
-                try:
-                    track = response['tracks']['items'][0]
-                    track_uri = track['uri'].split(':')[2]
-                except IndexError as err:
-                    print(f"WARNING - IndexError - {err} - artist='{row[1]['artist_name']}' track='{row[1]['track_name']}'")
-                    continue
-
-                track_uri = track['uri'].split(':')[2]
-                artist = track['artists'][0]  # only one artist :(
-                album = track['album']
-
-                print(f'DEBUG - enrich track uri n°{index} (NaN -> {track_uri})')
-
-                stream['track_uri'] = track_uri
-                stream['artist_uri'] = artist['uri'].split(':')[2]
-                stream['track_duration_ms'] = track.get('duration_ms', None)
-                stream['track_popularity'] = track.get('popularity', None)
-                stream['percentage_played'] = 0 if stream.ms_played == 0.0 else round((stream.ms_played / stream.track_duration_ms)*100, 2)
-                dict_all[index] = stream
-            except HTTPError as err:
-                print(f"WARNING - HTTPError - {err} - for artist='{row[1]['artist_name']}' track='{row[1]['track_name']}'")
-                continue
-        checkpoint += CHUNK_SIZE
-        df_tableau = saver(df_tableau, dict_all)
-        dict_all = {}
-
-    # if track already have an uri
-    print(f'INFO - enrich track data for {len(rows_with_track_uri)} tracks')
-    target = len(rows_with_track_uri)
-    step = CHUNK_SIZE * 10
-    checkpoint = 0
-    for rows in chunks_iter(rows_with_track_uri.iterrows(), CHUNK_SIZE):
+    for rows in chunks_iter(df.iterrows(), CHUNK_SIZE):
         print(' ' * 40 + BoldColor.PURPLE + '[' + '-' * int(checkpoint / step) + ' ' * int((target - checkpoint) / step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
         response = another_get([row[1]['track_uri'] for row in rows])  # il doit y avoir mieux
         for i, row in enumerate(rows):
