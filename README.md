@@ -2,6 +2,8 @@
 
 - Download spotify data
 - Extract files
-- Extract "tracks" part of the file YourLibrary.json in a file called Yourlibrary_tracks.json
-- Update the index number in the app.py script
-- Launch app.py
+- Extract "tracks" part of the file YourLibrary.json in a file called Yourlibrary_tracks.json with `prepare.py`
+- Concat all streams files with `concat.py`
+- Filter already enriched streams with `filter.py`
+- Enrich spotify metadata with `enrich.py`
+- Index their to elastic with `to_elastic.py`
