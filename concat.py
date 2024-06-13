@@ -11,7 +11,7 @@ CONFIG = json.load(open(CONFIG_FILE, 'r', encoding='UTF-8'))
 # Files
 RESOURCES_FOLDER = CONFIG['file']['resources_folder']
 
-YOUR_STREAMING_HISTORY_FILES = 'endsong*.json'
+YOUR_STREAMING_HISTORY_FILES = 'Streaming_History_Audio_*.json'
 YOUR_STREAMING_HISTORY_PATHS = [f for f in glob.glob( RESOURCES_FOLDER + '/' + YOUR_STREAMING_HISTORY_FILES)]
 
 ALL_YOUR_STREAMING_HISTORY_FILE = 'AllStreamingHistory.csv'
