@@ -1,6 +1,5 @@
 import glob
 import json
-import os
 
 import numpy as np
 import pandas as pd
@@ -9,6 +8,7 @@ import pandas as pd
 CONFIG_FILE = 'config.json'
 CONFIG = json.load(open(CONFIG_FILE, 'r', encoding='UTF-8'))
 
+# Files
 RESOURCES_FOLDER = CONFIG['file']['resources_folder']
 
 YOUR_STREAMING_HISTORY_FILES = 'StreamingHistory*.json'
@@ -28,7 +28,7 @@ def header_converter(df):
     return df.rename(columns={'endTime': 'end_time', 'msPlayed': 'ms_played', 'artistName': 'artist_name', 'trackName': 'track_name'})
 
 
-# reads streaming files
+# Read streaming files
 df_stream = header_converter(pd.concat(map(pd.read_json, YOUR_STREAMING_HISTORY_PATHS)))
 print(f'INFO - {len(df_stream)} rows in {YOUR_STREAMING_HISTORY_PATHS}')
 
@@ -44,18 +44,19 @@ df_stream['hour'] = pd.DatetimeIndex(df_stream.end_time).hour.map("{:02}".format
 df_stream['minute'] = pd.DatetimeIndex(df_stream.end_time).minute.map("{:02}".format)
 df_stream['min_played'] = df_stream.ms_played / 1000 / 60
 
-# reads library files
+# Read library files
 df_library = pd.read_json(YOUR_LIBRARY_TRACKS_PATH)
 df_library['track_src_id'] = df_library['artist'] + ':' + df_library['track']
 df_uri = df_library['uri'].str.split(':', expand=True)
 df_library['track_uri'] = df_uri[2]
 
-# merges streaming and library data
+# Merge streaming and library data
 df_tableau = df_stream.copy()
 df_tableau['in_library'] = np.where(df_tableau['track_src_id'].isin(df_library['track_src_id'].tolist()), True, False)
 df_tableau = pd.merge(df_tableau, df_library[['album', 'track_src_id', 'track_uri']], how='left', on=['track_src_id'])
 df_tableau['date'] = pd.to_datetime(df_tableau.end_time)
 df_tableau = df_tableau.sort_values('date').reset_index(drop=True).drop('date', axis=1)
 
+# Save stream history
 df_tableau.to_csv(ALL_YOUR_STREAMING_HISTORY_PATH, mode='w', index_label='index')
 print(f'INFO - {len(df_stream)} rows are saved at {ALL_YOUR_STREAMING_HISTORY_PATH}')

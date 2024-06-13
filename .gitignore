@@ -1,9 +1,12 @@
 venv/
 
-config.json
+config.*
 .cache
 
 resources/
 results/
+kibana/
 *.csv
 *.json
+
+!config.default.json
