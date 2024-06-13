@@ -13,6 +13,21 @@ spotipy = "^2.23.0"
 elasticsearch = "^8.13.1"
 tinydb = "^4.8.0"
 
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.1.0"
+black = "^24.4.2"
+
+[tool.black]
+line-length = 160
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = """
+    C0114,
+    C0115,
+    C0116,
+    C0301
+"""
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
