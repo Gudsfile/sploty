@@ -191,8 +191,8 @@ def enrich_artist_uri(rows):
     print('INFO - enrich artist uri')
     artist_uris = get_artist_uris([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
-    for i in range(len(rows)):
-        rows[i][1]['artist_uri'] = artist_uris[i]
+    for i, row in enumerate(rows):
+        row[1]['artist_uri'] = artist_uris[i]
 
     return rows
 
@@ -201,9 +201,9 @@ def enrich_track_data(rows):
     print('INFO - enrich track data')
     track_durations_ms, track_popularity = get_track_data([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
-    for i in range(len(rows)):
-        rows[i][1]['track_duration_ms'] = track_durations_ms[i]
-        rows[i][1]['track_popularity'] = track_popularity[i]
+    for i, row in enumerate(rows):
+        row[1]['track_duration_ms'] = track_durations_ms[i]
+        row[1]['track_popularity'] = track_popularity[i]
 
     return rows
 
@@ -212,9 +212,9 @@ def enrich_artist_data(rows):
     print('INFO - enrich artist data')
     artist_genres, artist_popularity = get_artist_data([row[1]['artist_uri'] if row[1]['artist_uri'] else 'NaN' for row in rows])
 
-    for i in range(len(rows)):
-        rows[i][1]['artist_genres'] = artist_genres[i]
-        rows[i][1]['artist_popularity'] = artist_popularity[i]
+    for i, row in enumerate(rows):
+        row[1]['artist_genres'] = artist_genres[i]
+        row[1]['artist_popularity'] = artist_popularity[i]
 
     return rows
 
@@ -223,8 +223,8 @@ def enrich_track_audio_features(rows):
     print('INFO - enrich audio features')
     track_af = get_track_audio_features([row[1]['track_uri'] if row[1]['track_uri'] else 'NaN' for row in rows])
 
-    for i in range(len(rows)):
-        rows[i][1]['audio_features'] = track_af[i]
+    for i, row in enumerate(rows):
+        row[1]['audio_features'] = track_af[i]
 
     return rows
 
@@ -242,7 +242,7 @@ def set_multidata(elastic, data, request_timeout=10):
     print(f' -> bulk {len(data)} documents')
     response = helpers.bulk(elastic, bulk_factory(data), request_timeout=request_timeout)
     print(f' <- bulk response is {response}')
-    
+
 
 def create_indice_if_not_exist(elastic, index):
     if elastic.indices.exists(index = index):
