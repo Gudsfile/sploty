@@ -2,6 +2,8 @@
 
 Visualize and understand my Spotify data.
 
+🚧 Work-in-progress repository
+
 - [How do I configure Sploty?](#how-do-i-configure-sploty)
 - [How do I use Sploty?](#how-do-i-use-sploty)
 
@@ -97,3 +99,7 @@ Retrieve host, useername and password and complete the `config.json` file
 ### Visualize your data
 
 Open Kibana ([`http://localhost:5601`](http://localhost:5601) avec `docker-elk`) and create a dashboard to query your index
+
+🚧 This part is not yet in the repository
+
+![Image of a sample of Kibana board](img/kibana_board.png)
