@@ -9,7 +9,8 @@ import requests
 from requests.exceptions import HTTPError
 
 CONFIG_FILE = "config.json"
-CONFIG = json.load(open(CONFIG_FILE, "r", encoding="UTF-8"))
+with open(CONFIG_FILE, "r", encoding="utf8") as file:
+    CONFIG = json.load(file.read())
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
 
@@ -203,15 +204,20 @@ def better_enrich(df_tableau):
         dict_all = {}
 
 
+def number_of_lines(file_path: str):
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="UTF-8") as file:
+            return sum(1 for _ in file)
+    return 0
+
+
 # enriches the data tracks and indexes it
 df_stream = pd.read_csv(ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH)
 print(f"INFO - {len(df_stream)} rows to enrich")
 
-old_number_of_enriched_streams = (
-    0 if not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH) else sum(1 for line in open(YOUR_ENRICHED_STREAMING_HISTORY_PATH, encoding="UTF-8"))
-)
+old_number_of_enriched_streams = number_of_lines(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
 
 better_enrich(df_stream)
 
-new_number_of_enriched_streams = sum(1 for line in open(YOUR_ENRICHED_STREAMING_HISTORY_PATH, encoding="UTF-8"))
+new_number_of_enriched_streams = number_of_lines(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
 print(f"INFO - {new_number_of_enriched_streams-old_number_of_enriched_streams} tracks enriched / {len(df_stream)} rows to enrich")
