@@ -1,0 +1,53 @@
+name: Python application
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.12
+
+    - name: Set up Poetry cache
+      id: cache-poetry
+      uses: actions/cache@v4
+      with:
+        path: /opt/poetry
+        key: ${{ runner.os }}-poetry
+    - name: Install Poetry
+      if: steps.cache-poetry.outputs.cache-hit != 'true'
+      run: |
+        pip install --upgrade pip
+        pip install poetry
+        poetry --version
+
+    - name: Set up Poetry dependencies cache
+      uses: actions/cache@v4
+      id: cached-poetry-dependencies
+      with:
+        path: .venv
+        key: ${{ runner.os }}-venv
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: |
+        poetry --version
+        poetry config --local virtualenvs.in-project true
+        poetry install
+
+    - name: Lint with pylint
+      run: |
+        poetry run pylint *.py
