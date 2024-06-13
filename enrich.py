@@ -189,7 +189,7 @@ def better_enrich(df_tableau):
 
             track = response["tracks"][i]
             artist = track["artists"][0]  # only one artist :(
-            album = track["album"]
+            # album = track["album"]
             track_uri = track["uri"]
 
             print(f"DEBUG - enrich track uri n°{index} ({track_uri})")
