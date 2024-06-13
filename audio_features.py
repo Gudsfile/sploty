@@ -1,12 +1,10 @@
 import json
-import os
 import time
 
-import numpy as np
 import pandas as pd
 import requests
 from requests.exceptions import HTTPError
-from tinydb import TinyDB, Query
+from tinydb import TinyDB
 
 
 CONFIG_FILE = 'config.json'
@@ -85,44 +83,38 @@ def get_track_audio_features(track_uris: list):
     response = do_spotify_request(SPOTIFY_BASE_URL + 'audio-features/', headers=SPOTIFY_HEADERS, params=params)
     return response['audio_features']
 
-
-def insertInDb(db, data):
+def inserts_in_db(db, data):
     db.insert_multiple(data)
 
-
-def insertEnrichedTracks(db, tracks_uri, chunk_size):
+def inserts_enriched_tracks(db, tracks_uri, chunk_size):
     for chunk in chunks_iter(tracks_uri, chunk_size):
         track_audio_features = get_track_audio_features(chunk)
         track_audio_features_without_none_value = [taf for taf in track_audio_features if taf]
-        insertInDb(db, track_audio_features_without_none_value)
+        inserts_in_db(db, track_audio_features_without_none_value)
 
-def completes_streams_with_audio_features(df_streams, df_audio_features):
-    df_completed_streams = df_streams.merge(df_audio_features, left_on='track_uri', right_on='id', how='left')
+def completes_streams_with_audio_features(df_left, left_key, df_right, right_key):
+    df_completed = df_left.merge(df_right, left_on=left_key, right_on=right_key, how='left')
     # values initial col with new one if it is na
-    for col_x in list(filter(lambda x: x.endswith('_x'), df_completed_streams.columns.to_list())):
+    for col_x in list(filter(lambda x: x.endswith('_x'), df_completed.columns.to_list())):
         col = col_x[:-2]
         col_y = col_x[:-1] + 'y'
-        df_completed_streams[col] = df_completed_streams[col_x].fillna(df_completed_streams[col_y])
-        df_completed_streams = df_completed_streams.drop([col_x, col_y], axis=1)
-    return df_completed_streams
+        df_completed[col] = df_completed[col_x].fillna(df_completed[col_y])
+        df_completed = df_completed.drop([col_x, col_y], axis=1)
+    return df_completed
 
-"""
 # TODO clean this part
 # this part is to drop duplicate uris in the tinydb
-
-maliste=['A', 'B', 'A', 'C', 'E', 'E', 'E']
-
-def get_dup_id(maliste):
-    monres = list()
-    for i in range(1, len(maliste)):
-        if maliste[i] in maliste[:i]:
-            monres.append(i)
-    return monres
-
-dup_id = get_dup_id(maliste)
-db.remove(doc_ids=dup_id)
-len(db.all())
-"""
+# maliste=['A', 'B', 'A', 'C', 'E', 'E', 'E']
+# def get_dup_id(maliste):
+#     monres = list()
+#     for i in range(1, len(maliste)):
+#         if maliste[i] in maliste[:i]:
+#             monres.append(i)
+#     return monres
+# 
+# dup_id = get_dup_id(maliste)
+# db.remove(doc_ids=dup_id)
+# len(db.all())
 
 # get the audio features of tracks saved it in the TinyDb
 df_stream = pd.read_csv(ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH)
@@ -136,7 +128,7 @@ print(f'INFO - {len(track_uris_from_file)} unique uris')
 print(f'INFO - {len(track_uris_from_db)} uris for which the audio features are already retrieved')
 print(f'INFO - {len(audio_feature_uris_to_get)} uris for which the audio features must be recovered')
 
-insertEnrichedTracks(DB, audio_feature_uris_to_get, CHUNK_SIZE)
+inserts_enriched_tracks(DB, audio_feature_uris_to_get, CHUNK_SIZE)
 
 track_uris_from_db = [track['id'] for track in DB.all()]
 track_uris_failed_to_get = audio_feature_uris_to_get.difference(track_uris_from_db)
@@ -147,6 +139,6 @@ print(f'INFO - {len(track_uris_failed_to_get)} uris for which the audio features
 df_enriched_streams = pd.read_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
 df_audio_features = pd.DataFrame(DB.all())
 
-df_completed_streams = completes_streams_with_audio_features(df_enriched_streams, df_audio_features)
+df_completed_streams = completes_streams_with_audio_features(df_enriched_streams, 'track_uri', df_audio_features, 'id')
 df_completed_streams.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode='w', index=False)
 print(f'INFO - {len(df_completed_streams)} rows are re-saved at {YOUR_ENRICHED_STREAMING_HISTORY_PATH} with audio features completed')

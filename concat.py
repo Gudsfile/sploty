@@ -1,8 +1,8 @@
 import glob
 import json
 
-import numpy as np
 import pandas as pd
+from pandas import DatetimeIndex
 
 
 CONFIG_FILE = 'config.json'
@@ -34,12 +34,14 @@ df_stream['track_uri'] = df_stream['spotify_track_uri'].str.split(":", n = 3, ex
 df_stream = df_stream.drop(['spotify_track_uri', 'episode_name', 'episode_show_name', 'spotify_episode_uri'], axis=1)
 
 df_stream['track_src_id'] = df_stream.artist_name + ':' + df_stream.track_name
-df_stream['year'] = pd.DatetimeIndex(df_stream.end_time).year.map("{:04}".format)
-df_stream['month'] = (pd.DatetimeIndex(df_stream.end_time).month).map("{:02}".format)
-df_stream['month_name'] = pd.DatetimeIndex(df_stream.end_time).month_name()
-df_stream['day'] = pd.DatetimeIndex(df_stream.end_time).day.map("{:02}".format)
-df_stream['hour'] = pd.DatetimeIndex(df_stream.end_time).hour.map("{:02}".format)
-df_stream['minute'] = pd.DatetimeIndex(df_stream.end_time).minute.map("{:02}".format)
+df_stream['year'] = DatetimeIndex(df_stream.end_time).year.map(lambda x: f'{x:0>4}') # pylint: disable=E1101
+df_stream['month'] = (DatetimeIndex(df_stream.end_time).month).map(lambda x: f'{x:0>2}') # pylint: disable=E1101
+df_stream['month_name'] = DatetimeIndex(df_stream.end_time).month_name() # pylint: disable=E1101
+df_stream['day'] = DatetimeIndex(df_stream.end_time).day.map(lambda x: f'{x:0>2}') # pylint: disable=E1101
+df_stream['hour'] = DatetimeIndex(df_stream.end_time).hour.map(lambda x: f'{x:0>2}') # pylint: disable=E1101
+df_stream['minute'] = DatetimeIndex(df_stream.end_time).minute.map(lambda x: f'{x:0>2}') # pylint: disable=E1101
+# ":04" writting is fixed in Python 3.10+ : https://stackoverflow.com/a/36044788
+
 df_stream['min_played'] = df_stream.ms_played / 1000 / 60
 df_stream['id'] = df_stream.end_time + ':' + df_stream.track_uri
 

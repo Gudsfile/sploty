@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from enum import Enum
 
 import numpy as np
 import pandas as pd
@@ -41,7 +42,7 @@ SPOTIFY_HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
 
 
 # Color
-class BoldColor:
+class BoldColor(str, Enum):
     PURPLE = '\033[95m'
     CYAN = '\033[96m'
     DARKCYAN = '\033[36m'
@@ -144,8 +145,8 @@ def saver(df_tableau, complete_data):
         return df_tableau
 
     streams = merger(df_tableau, complete_data)
-    to_write = streams[streams['is_done'] == True][sorted_cols]
-    to_keep = streams[streams['is_done'] == False]
+    to_write = streams[streams['is_done'] == True][sorted_cols] # pylint: disable=C0121
+    to_keep = streams[streams['is_done'] == False] # pylint: disable=C0121
     # == to prevent "KeyError: False"
 
     # writes data in csv file
@@ -165,6 +166,7 @@ def better_enrich(df_tableau):
     checkpoint = 0
     for rows in chunks_iter(df.iterrows(), CHUNK_SIZE):
         print(' ' * 40 + BoldColor.PURPLE + '[' + '-' * int(checkpoint / step) + ' ' * int((target - checkpoint) / step) + ']' + BoldColor.DARKCYAN + f' {checkpoint}/{target}' + BoldColor.END)
+        # print(f'{" "*40}{BoldColor.PURPLE}[{"-"*int(checkpoint / step)}{" "* int((target - checkpoint) / step)}]{BoldColor.DARKCYAN} {checkpoint}/{target}{BoldColor.END}')
         response = another_get([row[1]['track_uri'] for row in rows])  # il doit y avoir mieux
         for i, row in enumerate(rows):
             index = row[0]
