@@ -50,4 +50,4 @@ jobs:
 
     - name: Lint with pylint
       run: |
-        poetry run pylint *.py
+        poetry run pylint sploty

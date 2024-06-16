@@ -6,7 +6,7 @@ from pandas import DatetimeIndex
 
 CONFIG_FILE = "config.json"
 with open(CONFIG_FILE, "r", encoding="utf8") as file:
-    CONFIG = json.load(file.read())
+    CONFIG = json.load(file)
 
 # Files
 RESOURCES_FOLDER = CONFIG["file"]["resources_folder"]
