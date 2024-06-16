@@ -10,7 +10,7 @@ from requests.exceptions import HTTPError
 
 CONFIG_FILE = "config.json"
 with open(CONFIG_FILE, "r", encoding="utf8") as file:
-    CONFIG = json.load(file.read())
+    CONFIG = json.load(file)
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
 

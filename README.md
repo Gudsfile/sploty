@@ -75,24 +75,24 @@ Retrieve host, useername and password and complete the `config.json` file
 
 1. Concat all streams files with
    ```shell
-   poetry run python concat.py
+   poetry run python sploty/concat.py
    ```
 2. Filter already enriched streams with
    ```shell
-   poetry run python filter.py
+   poetry run python sploty/filter.py
    ```
 3. Enrich spotify metadata with
    ```shell
-   poetry run python enrich.py
+   poetry run python sploty/enrich.py
    ```
 4. Enrich spotify audio features with 
    ```shell
-   poetry run python audio_features.py
+   poetry run python sploty/audio_features.py
    ```
    :bug: There's a bug: there's a shift in the columns
 5. Index their to elastic with
    ```shell
-   poetry run python to_elastic.py
+   poetry run python sploty/to_elastic.py
    ```
    This part required Elasticsearch, have a look at [`docker-elk`](https://github.com/deviantony/docker-elk)
 
