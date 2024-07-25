@@ -4,7 +4,7 @@ import pandas as pd
 from elasticsearch import Elasticsearch, helpers
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, "r", encoding="utf8") as file:
+with open(CONFIG_FILE, encoding="utf8") as file:
     CONFIG = json.load(file)
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
@@ -83,12 +83,12 @@ df_stream = df_stream.rename(
         "valence": "track_audio_feature_valence",
         "tempo": "track_audio_feature_tempo",
         "time_signature": "track_audio_feature_time_signature",
-    }
+    },
 )
 
 df_stream = df_stream.drop(["track_src_id"], axis=1)
 df_stream = df_stream.drop(["minute", "hour", "day", "month", "year"], axis=1)
-df_stream = df_stream.drop(["stream_skipped"], axis=1)  # todo fix error
+df_stream = df_stream.drop(["stream_skipped"], axis=1)  # TODO fix error
 
 # Index streams
 print(f"INFO - indexing {len(df_stream)} tracks to {ELASTIC_INDEX_NAME}")

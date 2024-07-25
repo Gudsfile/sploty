@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.errors import EmptyDataError
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, "r", encoding="utf8") as file:
+with open(CONFIG_FILE, encoding="utf8") as file:
     CONFIG = json.load(file)
 
 # Files

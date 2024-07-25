@@ -5,7 +5,7 @@ import pandas as pd
 from pandas import DatetimeIndex
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, "r", encoding="utf8") as file:
+with open(CONFIG_FILE, encoding="utf8") as file:
     CONFIG = json.load(file)
 
 # Files
@@ -19,7 +19,9 @@ ALL_YOUR_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + ALL_YOUR_STREAMING_HI
 
 
 def header_converter(df):
-    return df.rename(columns={"endTime": "end_time", "msPlayed": "ms_played", "artistName": "artist_name", "trackName": "track_name"})
+    return df.rename(
+        columns={"endTime": "end_time", "msPlayed": "ms_played", "artistName": "artist_name", "trackName": "track_name"},
+    )
 
 
 # Read streaming files
@@ -35,7 +37,7 @@ df_stream = df_stream.rename(
         "master_metadata_track_name": "track_name",
         "master_metadata_album_artist_name": "artist_name",
         "master_metadata_album_album_name": "album_name",
-    }
+    },
 )
 df_stream["track_uri"] = df_stream["spotify_track_uri"].str.split(":", n=3, expand=True)[2]
 df_stream = df_stream.drop(["spotify_track_uri", "episode_name", "episode_show_name", "spotify_episode_uri"], axis=1)

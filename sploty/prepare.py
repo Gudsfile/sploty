@@ -1,7 +1,7 @@
 import json
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, "r", encoding="utf8") as file:
+with open(CONFIG_FILE, encoding="utf8") as file:
     CONFIG = json.load(file)
 
 # Files
@@ -14,7 +14,7 @@ YOUR_LIBRARY_TRACKS_FILE = "YourLibrary_tracks.json"
 YOUR_LIBRARY_TRACKS_PATH = RESOURCES_FOLDER + "/" + YOUR_LIBRARY_TRACKS_FILE
 
 # Read library Spotify file
-with open(YOUR_LIBRARY_PATH, "r", encoding="utf8") as file:
+with open(YOUR_LIBRARY_PATH, encoding="utf8") as file:
     your_library = json.load(file)
 
 # Extract tracks
