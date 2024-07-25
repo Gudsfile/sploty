@@ -48,6 +48,6 @@ jobs:
         poetry config --local virtualenvs.in-project true
         poetry install
 
-    - name: Lint with pylint
+    - name: Lint with ruff
       run: |
-        poetry run pylint sploty
+        poetry run ruff check
