@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import requests
 from requests.exceptions import HTTPError
+from settings import logger
 
 CONFIG_FILE = "config.json"
 with open(CONFIG_FILE, encoding="utf8") as file:
@@ -77,16 +78,16 @@ def chunks_iter(iterable, chunk_size):
 def do_spotify_request(url, headers, params=None):
     try:
         response = requests.get(url, headers=headers, params=params, timeout=SPOTIFY_TIMEOUT)
-        print(f" -> {response.request.url}")
-        print(f" <- {response.status_code} {response.text[:200].replace(' ', '').encode('UTF-8')}")
+        logger.debug(" -> %s", response.request.url)
+        logger.debug(" <- %i %s", response.status_code, response.text[:200].replace(" ", "").encode("UTF-8"))
         response.raise_for_status()
         return response.json()
     except HTTPError as err:
         if err.response.status_code == 429:
-            print(f"WARN - HTTPError - {err} (sleeping {SPOTIFY_SLEEP}s...)")
+            logger.warning("HTTPError - %s (sleeping %is...)", err, SPOTIFY_SLEEP)
             time.sleep(SPOTIFY_SLEEP)
             return do_spotify_request(url, headers, params)
-        print(f"WARN - HTTPError - {err} (skipping)")
+        logger.warning("HTTPError - %s (skipping)", err)
         raise
 
 
@@ -165,30 +166,27 @@ def saver(df_tableau, complete_data):
 
 
 def better_enrich(df_tableau):
-    print(f"INFO - enrich track data for {len(df_tableau)} tracks")
+    logger.info("enrich track data for %i tracks", len(df_tableau))
 
     df = df_tableau[["track_uri", "track_name", "artist_name", "track_src_id", "ms_played"]].drop_duplicates(
         "track_src_id",
     )
-    print(f"INFO - reduce enrich for only {len(df)} tracks")
+    logger.info("reduce enrich for only %i tracks", len(df))
 
     dict_all = {}
     target = len(df)
-    step = CHUNK_SIZE * 10
     checkpoint = 0
     for rows in chunks_iter(df.iterrows(), CHUNK_SIZE):
-        print(
-            " " * 40
-            + BoldColor.PURPLE
+        logger.info(
+            BoldColor.PURPLE
             + "["
-            + "-" * int(checkpoint / step)
-            + " " * int((target - checkpoint) / step)
+            + ("-" * int(checkpoint * 60 / target)).ljust(60, " ")
             + "]"
             + BoldColor.DARKCYAN
             + f" {checkpoint}/{target}"
             + BoldColor.END,
         )
-        # print(f'{" "*40}{BoldColor.PURPLE}[{"-"*int(checkpoint / step)}{" "* int((target - checkpoint) / step)}]{BoldColor.DARKCYAN} {checkpoint}/{target}{BoldColor.END}')
+        # logger.info(f'{" "*40}{BoldColor.PURPLE}[{"-"*int(checkpoint / step)}{" "* int((target - checkpoint) / step)}]{BoldColor.DARKCYAN} {checkpoint}/{target}{BoldColor.END}') #noqa: ERA001, E501
         response = another_get([row[1]["track_uri"] for row in rows])  # il doit y avoir mieux
         for i, row in enumerate(rows):
             index = row[0]
@@ -196,10 +194,10 @@ def better_enrich(df_tableau):
 
             track = response["tracks"][i]
             artist = track["artists"][0]  # only one artist :(
-            # album = track["album"]
+            # album = track["album"] #noqa: ERA001
             track_uri = track["uri"]
 
-            print(f"DEBUG - enrich track uri n°{index} ({track_uri})")
+            logger.debug("enrich track uri n°%i (%s)", index, track_uri)
 
             stream["artist_uri"] = artist["uri"].split(":")[2]
             stream["track_duration_ms"] = (
@@ -222,13 +220,15 @@ def number_of_lines(file_path: str):
 
 # enriches the data tracks and indexes it
 df_stream = pd.read_csv(ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH)
-print(f"INFO - {len(df_stream)} rows to enrich")
+logger.info("%i rows to enrich", len(df_stream))
 
 old_number_of_enriched_streams = number_of_lines(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
 
 better_enrich(df_stream)
 
 new_number_of_enriched_streams = number_of_lines(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
-print(
-    f"INFO - {new_number_of_enriched_streams-old_number_of_enriched_streams} tracks enriched / {len(df_stream)} rows to enrich",
+logger.info(
+    "%i tracks enriched / %i rows to enrich",
+    new_number_of_enriched_streams - old_number_of_enriched_streams,
+    len(df_stream),
 )

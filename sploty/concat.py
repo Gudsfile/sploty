@@ -3,6 +3,7 @@ import json
 
 import pandas as pd
 from pandas import DatetimeIndex
+from settings import logger
 
 CONFIG_FILE = "config.json"
 with open(CONFIG_FILE, encoding="utf8") as file:
@@ -20,16 +21,21 @@ ALL_YOUR_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + ALL_YOUR_STREAMING_HI
 
 def header_converter(df):
     return df.rename(
-        columns={"endTime": "end_time", "msPlayed": "ms_played", "artistName": "artist_name", "trackName": "track_name"},
+        columns={
+            "endTime": "end_time",
+            "msPlayed": "ms_played",
+            "artistName": "artist_name",
+            "trackName": "track_name",
+        },
     )
 
 
 # Read streaming files
 df_stream = header_converter(pd.concat(map(pd.read_json, YOUR_STREAMING_HISTORY_PATHS)))
-print(f"INFO - {len(df_stream)} rows in {YOUR_STREAMING_HISTORY_PATHS}")
+logger.info("%i rows in %s", len(df_stream), YOUR_STREAMING_HISTORY_PATHS)
 
 df_stream = df_stream.drop_duplicates()
-print(f"INFO - {len(df_stream)} rows without duplicated rows")
+logger.info("%i rows without duplicated rows", len(df_stream))
 
 df_stream = df_stream.rename(
     columns={
@@ -59,4 +65,5 @@ df_stream = df_stream.sort_values("date").reset_index(drop=True).drop("date", ax
 
 # Save stream history
 df_stream.to_csv(ALL_YOUR_STREAMING_HISTORY_PATH, mode="w", index=False)
-print(f"INFO - {len(df_stream)} rows are saved at {ALL_YOUR_STREAMING_HISTORY_PATH}")
+logger.info("%i rows are saved at %s", len(df_stream), ALL_YOUR_STREAMING_HISTORY_PATH)
+logger.info("%i rows are saved at %s", len(df_stream), ALL_YOUR_STREAMING_HISTORY_PATH)
