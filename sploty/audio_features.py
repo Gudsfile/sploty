@@ -7,7 +7,7 @@ from requests.exceptions import HTTPError
 from tinydb import TinyDB
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, "r", encoding="utf8") as file:
+with open(CONFIG_FILE, encoding="utf8") as file:
     CONFIG = json.load(file.read())
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
@@ -148,4 +148,6 @@ df_audio_features = pd.DataFrame(DB.all())
 
 df_completed_streams = completes_streams_with_audio_features(df_enriched_streams, "track_uri", df_audio_features, "id")
 df_completed_streams.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode="w", index=False)
-print(f"INFO - {len(df_completed_streams)} rows are re-saved at {YOUR_ENRICHED_STREAMING_HISTORY_PATH} with audio features completed")
+print(
+    f"INFO - {len(df_completed_streams)} rows are re-saved at {YOUR_ENRICHED_STREAMING_HISTORY_PATH} with audio features completed",
+)

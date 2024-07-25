@@ -9,7 +9,7 @@ import requests
 from requests.exceptions import HTTPError
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, "r", encoding="utf8") as file:
+with open(CONFIG_FILE, encoding="utf8") as file:
     CONFIG = json.load(file)
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
@@ -154,7 +154,12 @@ def saver(df_tableau, complete_data):
     # == to prevent "KeyError: False"
 
     # writes data in csv file
-    to_write.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode="a", header=not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH), index=False)
+    to_write.to_csv(
+        YOUR_ENRICHED_STREAMING_HISTORY_PATH,
+        mode="a",
+        header=not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH),
+        index=False,
+    )
 
     return to_keep.reset_index(drop=True)
 
@@ -162,7 +167,9 @@ def saver(df_tableau, complete_data):
 def better_enrich(df_tableau):
     print(f"INFO - enrich track data for {len(df_tableau)} tracks")
 
-    df = df_tableau[["track_uri", "track_name", "artist_name", "track_src_id", "ms_played"]].drop_duplicates("track_src_id")
+    df = df_tableau[["track_uri", "track_name", "artist_name", "track_src_id", "ms_played"]].drop_duplicates(
+        "track_src_id",
+    )
     print(f"INFO - reduce enrich for only {len(df)} tracks")
 
     dict_all = {}
@@ -179,7 +186,7 @@ def better_enrich(df_tableau):
             + "]"
             + BoldColor.DARKCYAN
             + f" {checkpoint}/{target}"
-            + BoldColor.END
+            + BoldColor.END,
         )
         # print(f'{" "*40}{BoldColor.PURPLE}[{"-"*int(checkpoint / step)}{" "* int((target - checkpoint) / step)}]{BoldColor.DARKCYAN} {checkpoint}/{target}{BoldColor.END}')
         response = another_get([row[1]["track_uri"] for row in rows])  # il doit y avoir mieux
@@ -195,7 +202,9 @@ def better_enrich(df_tableau):
             print(f"DEBUG - enrich track uri n°{index} ({track_uri})")
 
             stream["artist_uri"] = artist["uri"].split(":")[2]
-            stream["track_duration_ms"] = track.get("duration_ms", np.nan) if track.get("duration_ms", None) != 0.0 else np.nan
+            stream["track_duration_ms"] = (
+                track.get("duration_ms", np.nan) if track.get("duration_ms", None) != 0.0 else np.nan
+            )
             stream["track_popularity"] = track.get("popularity", None)
             stream["percentage_played"] = round((stream.ms_played / stream.track_duration_ms) * 100, 2)
             dict_all[index] = stream
@@ -206,7 +215,7 @@ def better_enrich(df_tableau):
 
 def number_of_lines(file_path: str):
     if os.path.exists(file_path):
-        with open(file_path, "r", encoding="UTF-8") as f:
+        with open(file_path, encoding="UTF-8") as f:
             return sum(1 for _ in f)
     return 0
 
@@ -220,4 +229,6 @@ old_number_of_enriched_streams = number_of_lines(YOUR_ENRICHED_STREAMING_HISTORY
 better_enrich(df_stream)
 
 new_number_of_enriched_streams = number_of_lines(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
-print(f"INFO - {new_number_of_enriched_streams-old_number_of_enriched_streams} tracks enriched / {len(df_stream)} rows to enrich")
+print(
+    f"INFO - {new_number_of_enriched_streams-old_number_of_enriched_streams} tracks enriched / {len(df_stream)} rows to enrich",
+)
