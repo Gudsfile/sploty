@@ -2,6 +2,7 @@ import json
 
 import pandas as pd
 from elasticsearch import Elasticsearch, helpers
+from settings import logger
 
 CONFIG_FILE = "config.json"
 with open(CONFIG_FILE, encoding="utf8") as file:
@@ -28,9 +29,9 @@ def bulk_factory(df, index_name):
 
 
 def set_multidata(elastic, data, index_name):
-    print(f" -> bulk {len(data)} documents")
+    logger.debug(" -> bulk %i documents", len(data))
     response = helpers.bulk(elastic, bulk_factory(data, index_name), raise_on_error=False)
-    print(f" <- bulk response is {response}")
+    logger.debug(" <- bulk response is %s", response)
 
 
 # Read enriched streams
@@ -91,7 +92,7 @@ df_stream = df_stream.drop(["minute", "hour", "day", "month", "year"], axis=1)
 df_stream = df_stream.drop(["stream_skipped"], axis=1)  # TODO fix error
 
 # Index streams
-print(f"INFO - indexing {len(df_stream)} tracks to {ELASTIC_INDEX_NAME}")
+logger.info("indexing %i tracks to %s", len(df_stream), ELASTIC_INDEX_NAME)
 json_tmp = json.loads(df_stream.to_json(orient="records"))
-print(json_tmp[-1])
+logger.debug("%s", json_tmp[-1])
 set_multidata(ELASTIC, json_tmp, ELASTIC_INDEX_NAME)

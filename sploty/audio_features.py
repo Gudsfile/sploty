@@ -4,11 +4,12 @@ import time
 import pandas as pd
 import requests
 from requests.exceptions import HTTPError
+from settings import logger
 from tinydb import TinyDB
 
 CONFIG_FILE = "config.json"
 with open(CONFIG_FILE, encoding="utf8") as file:
-    CONFIG = json.load(file.read())
+    CONFIG = json.load(file)
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
 
@@ -68,16 +69,20 @@ def chunks_iter(iterable, chunk_size):
 def do_spotify_request(url, headers, params=None):
     try:
         response = requests.get(url, headers=headers, params=params, timeout=120)
-        print(f" -> {response.request.url}")
-        print(f" <- {response.status_code} {response.text[:200].replace(' ', '').encode('UTF-8')}")
+        logger.debug(" -> %s", response.request.url)
+        logger.debug(
+            " <- %i %s",
+            response.status_code,
+            response.text[:200].replace(" ", "").encode("UTF-8"),
+        )
         response.raise_for_status()
         return response.json()
     except HTTPError as err:
         if err.response.status_code == 429:
-            print(f"WARN - HTTPError - {err} (sleeping {SPOTIFY_SLEEP}s...)")
+            logger.warning("HTTPError - %s (sleeping %is...)", err, SPOTIFY_SLEEP)
             time.sleep(SPOTIFY_SLEEP)
             return do_spotify_request(url, headers, params)
-        print(f"WARN - HTTPError - {err} (skipping)")
+        logger.warning("HTTPError - %s (skipping)", err)
         raise
 
 
@@ -111,36 +116,36 @@ def completes_streams_with_audio_features(df_left, left_key, df_right, right_key
 
 # TODO clean this part
 # this part is to drop duplicate uris in the tinydb
-# maliste=['A', 'B', 'A', 'C', 'E', 'E', 'E']
+# maliste=['A', 'B', 'A', 'C', 'E', 'E', 'E']#noqa: ERA001
 # def get_dup_id(maliste):
-#     monres = list()
+#     monres = list()#noqa: ERA001
 #     for i in range(1, len(maliste)):
 #         if maliste[i] in maliste[:i]:
-#             monres.append(i)
-#     return monres
+#             monres.append(i)#noqa: ERA001
+#     return monres#noqa: ERA001
 #
-# dup_id = get_dup_id(maliste)
-# db.remove(doc_ids=dup_id)
-# len(db.all())
+# dup_id = get_dup_id(maliste)#noqa: ERA001
+# db.remove(doc_ids=dup_id)#noqa: ERA001
+# len(db.all())#noqa: ERA001
 
 # get the audio features of tracks saved it in the TinyDb
 df_stream = pd.read_csv(ALL_YOUR_STREAMING_HISTORY_TO_ENRICH_PATH)
-print(f"INFO - {len(df_stream)} streams")
+logger.info("%i streams", len(df_stream))
 
 track_uris_from_file = set(df_stream["track_uri"])
 track_uris_from_db = [track["id"] for track in DB.all()]
 audio_feature_uris_to_get = track_uris_from_file.difference(track_uris_from_db)
 
-print(f"INFO - {len(track_uris_from_file)} unique uris")
-print(f"INFO - {len(track_uris_from_db)} uris for which the audio features are already retrieved")
-print(f"INFO - {len(audio_feature_uris_to_get)} uris for which the audio features must be recovered")
+logger.info("%i unique uris", len(track_uris_from_file))
+logger.info("%i uris for which the audio features are already retrieved", len(track_uris_from_db))
+logger.info("%i uris for which the audio features must be recovered", len(audio_feature_uris_to_get))
 
 inserts_enriched_tracks(DB, audio_feature_uris_to_get, CHUNK_SIZE)
 
 track_uris_from_db = [track["id"] for track in DB.all()]
 track_uris_failed_to_get = audio_feature_uris_to_get.difference(track_uris_from_db)
-print(f"INFO - {len(track_uris_from_db)} uris for which the audio features are now retrieved")
-print(f"INFO - {len(track_uris_failed_to_get)} uris for which the audio features could not be recovered")
+logger.info("%i uris for which the audio features are now retrieved", len(track_uris_from_db))
+logger.info("%i uris for which the audio features could not be recovered", len(track_uris_failed_to_get))
 
 # add audio feature to rows that do not have it
 df_enriched_streams = pd.read_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH)
@@ -148,6 +153,8 @@ df_audio_features = pd.DataFrame(DB.all())
 
 df_completed_streams = completes_streams_with_audio_features(df_enriched_streams, "track_uri", df_audio_features, "id")
 df_completed_streams.to_csv(YOUR_ENRICHED_STREAMING_HISTORY_PATH, mode="w", index=False)
-print(
-    f"INFO - {len(df_completed_streams)} rows are re-saved at {YOUR_ENRICHED_STREAMING_HISTORY_PATH} with audio features completed",
+logger.info(
+    "%i rows are re-saved at %s with audio features completed",
+    len(df_completed_streams),
+    YOUR_ENRICHED_STREAMING_HISTORY_PATH,
 )
