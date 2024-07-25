@@ -3,6 +3,8 @@ poetry.lock
 
 config.*
 .cache
+.ruff_cache
+.__pycache__
 
 resources/
 backup/

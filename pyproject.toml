@@ -14,22 +14,14 @@ elasticsearch = "^8.13.1"
 tinydb = "^4.8.0"
 
 [tool.poetry.group.dev.dependencies]
-pylint = "^3.1.0"
-black = "^24.4.2"
+ruff = "^0.5.5"
 
-[tool.black]
+[tool.ruff]
 line-length = 160
 
-[tool.pylint.'MESSAGES CONTROL']
-disable = """
-    C0114,
-    C0115,
-    C0116,
-    C0301,
-    W0511,
-    R0914,
-    R0801
-"""
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D", "TD", "FIX", "PD901"]
 
 [build-system]
 requires = ["poetry-core"]
