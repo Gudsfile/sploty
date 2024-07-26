@@ -1,7 +1,8 @@
 import json
-import os
 import time
 from enum import Enum
+from http import HTTPStatus
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from requests.exceptions import HTTPError
 from settings import logger
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, encoding="utf8") as file:
+with Path(CONFIG_FILE).open(encoding="utf8") as file:
     CONFIG = json.load(file)
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
@@ -83,7 +84,7 @@ def do_spotify_request(url, headers, params=None):
         response.raise_for_status()
         return response.json()
     except HTTPError as err:
-        if err.response.status_code == 429:
+        if err.response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
             logger.warning("HTTPError - %s (sleeping %is...)", err, SPOTIFY_SLEEP)
             time.sleep(SPOTIFY_SLEEP)
             return do_spotify_request(url, headers, params)
@@ -150,15 +151,15 @@ def saver(df_tableau, complete_data):
         return df_tableau
 
     streams = merger(df_tableau, complete_data)
-    to_write = streams[streams["is_done"] == True][sorted_cols]  # pylint: disable=C0121
-    to_keep = streams[streams["is_done"] == False]  # pylint: disable=C0121
+    to_write = streams[streams["is_done"] == True][sorted_cols]  # noqa: E712
+    to_keep = streams[streams["is_done"] == False]  # noqa: E712
     # == to prevent "KeyError: False"
 
     # writes data in csv file
     to_write.to_csv(
         YOUR_ENRICHED_STREAMING_HISTORY_PATH,
         mode="a",
-        header=not os.path.exists(YOUR_ENRICHED_STREAMING_HISTORY_PATH),
+        header=not Path(YOUR_ENRICHED_STREAMING_HISTORY_PATH).exists(),
         index=False,
     )
 
@@ -212,9 +213,10 @@ def better_enrich(df_tableau):
 
 
 def number_of_lines(file_path: str):
-    if os.path.exists(file_path):
-        with open(file_path, encoding="UTF-8") as f:
-            return sum(1 for _ in f)
+    fp = Path(file_path)
+    if fp.exists():
+        with fp.open(encoding="UTF-8") as file:
+            return sum(1 for _ in file)
     return 0
 
 
