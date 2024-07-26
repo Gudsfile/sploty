@@ -12,6 +12,8 @@ pandas = "^2.2.2"
 spotipy = "^2.23.0"
 elasticsearch = "^8.13.1"
 tinydb = "^4.8.0"
+pydantic = "^2.8.2"
+pydantic-settings = "^2.3.4"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.5.5"
