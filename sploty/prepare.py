@@ -1,9 +1,10 @@
 import json
+from pathlib import Path
 
 from settings import logger
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, encoding="utf8") as file:
+with Path(CONFIG_FILE).open(encoding="utf8") as file:
     CONFIG = json.load(file)
 
 # Files
@@ -16,11 +17,12 @@ YOUR_LIBRARY_TRACKS_FILE = "YourLibrary_tracks.json"
 YOUR_LIBRARY_TRACKS_PATH = RESOURCES_FOLDER + "/" + YOUR_LIBRARY_TRACKS_FILE
 
 # Read library Spotify file
-with open(YOUR_LIBRARY_PATH, encoding="utf8") as file:
+with Path(YOUR_LIBRARY_PATH).open(encoding="utf8") as file:
     your_library = json.load(file)
 
 # Extract tracks
 your_library_tracks = your_library["tracks"]
-with open(YOUR_LIBRARY_TRACKS_PATH, "w", encoding="UTF-8") as file:
+with Path(YOUR_LIBRARY_TRACKS_PATH).open("w", encoding="UTF-8") as file:
     json.dump(your_library_tracks, file)
+logger.info("library tracks saved in %s", YOUR_LIBRARY_TRACKS_PATH)
 logger.info("library tracks saved in %s", YOUR_LIBRARY_TRACKS_PATH)

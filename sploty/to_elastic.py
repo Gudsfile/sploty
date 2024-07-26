@@ -1,11 +1,13 @@
 import json
+from pathlib import Path
 
 import pandas as pd
 from elasticsearch import Elasticsearch, helpers
 from settings import logger
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, encoding="utf8") as file:
+
+with Path(CONFIG_FILE).open(encoding="utf8") as file:
     CONFIG = json.load(file)
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
@@ -95,4 +97,5 @@ df_stream = df_stream.drop(["stream_skipped"], axis=1)  # TODO fix error
 logger.info("indexing %i tracks to %s", len(df_stream), ELASTIC_INDEX_NAME)
 json_tmp = json.loads(df_stream.to_json(orient="records"))
 logger.debug("%s", json_tmp[-1])
+set_multidata(ELASTIC, json_tmp, ELASTIC_INDEX_NAME)
 set_multidata(ELASTIC, json_tmp, ELASTIC_INDEX_NAME)

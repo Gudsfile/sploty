@@ -1,20 +1,20 @@
-import glob
 import json
+from pathlib import Path
 
 import pandas as pd
 from pandas import DatetimeIndex
 from settings import logger
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, encoding="utf8") as file:
+
+with Path(CONFIG_FILE).open(encoding="utf8") as file:
     CONFIG = json.load(file)
 
 # Files
 RESOURCES_FOLDER = CONFIG["file"]["resources_folder"]
 
 YOUR_STREAMING_HISTORY_FILES = "Streaming_History_Audio_*.json"
-YOUR_STREAMING_HISTORY_PATHS = list(glob.glob(RESOURCES_FOLDER + "/" + YOUR_STREAMING_HISTORY_FILES))
-
+YOUR_STREAMING_HISTORY_PATHS = list(Path(RESOURCES_FOLDER).glob(YOUR_STREAMING_HISTORY_FILES))
 ALL_YOUR_STREAMING_HISTORY_FILE = "AllStreamingHistory.csv"
 ALL_YOUR_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + ALL_YOUR_STREAMING_HISTORY_FILE
 
@@ -49,12 +49,12 @@ df_stream["track_uri"] = df_stream["spotify_track_uri"].str.split(":", n=3, expa
 df_stream = df_stream.drop(["spotify_track_uri", "episode_name", "episode_show_name", "spotify_episode_uri"], axis=1)
 
 df_stream["track_src_id"] = df_stream.artist_name + ":" + df_stream.track_name
-df_stream["year"] = DatetimeIndex(df_stream.end_time).year.map(lambda x: f"{x:0>4}")  # pylint: disable=E1101
-df_stream["month"] = (DatetimeIndex(df_stream.end_time).month).map(lambda x: f"{x:0>2}")  # pylint: disable=E1101
-df_stream["month_name"] = DatetimeIndex(df_stream.end_time).month_name()  # pylint: disable=E1101
-df_stream["day"] = DatetimeIndex(df_stream.end_time).day.map(lambda x: f"{x:0>2}")  # pylint: disable=E1101
-df_stream["hour"] = DatetimeIndex(df_stream.end_time).hour.map(lambda x: f"{x:0>2}")  # pylint: disable=E1101
-df_stream["minute"] = DatetimeIndex(df_stream.end_time).minute.map(lambda x: f"{x:0>2}")  # pylint: disable=E1101
+df_stream["year"] = DatetimeIndex(df_stream.end_time).year.map(lambda x: f"{x:0>4}")
+df_stream["month"] = (DatetimeIndex(df_stream.end_time).month).map(lambda x: f"{x:0>2}")
+df_stream["month_name"] = DatetimeIndex(df_stream.end_time).month_name()
+df_stream["day"] = DatetimeIndex(df_stream.end_time).day.map(lambda x: f"{x:0>2}")
+df_stream["hour"] = DatetimeIndex(df_stream.end_time).hour.map(lambda x: f"{x:0>2}")
+df_stream["minute"] = DatetimeIndex(df_stream.end_time).minute.map(lambda x: f"{x:0>2}")
 # ":04" writting is fixed in Python 3.10+ : https://stackoverflow.com/a/36044788
 
 df_stream["min_played"] = df_stream.ms_played / 1000 / 60

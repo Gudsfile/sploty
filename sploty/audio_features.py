@@ -1,5 +1,7 @@
 import json
 import time
+from http import HTTPStatus
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -8,7 +10,7 @@ from settings import logger
 from tinydb import TinyDB
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, encoding="utf8") as file:
+with Path(CONFIG_FILE).open(encoding="utf8") as file:
     CONFIG = json.load(file)
 
 CHUNK_SIZE = CONFIG["file"]["chunk_size"]
@@ -78,7 +80,7 @@ def do_spotify_request(url, headers, params=None):
         response.raise_for_status()
         return response.json()
     except HTTPError as err:
-        if err.response.status_code == 429:
+        if err.response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
             logger.warning("HTTPError - %s (sleeping %is...)", err, SPOTIFY_SLEEP)
             time.sleep(SPOTIFY_SLEEP)
             return do_spotify_request(url, headers, params)

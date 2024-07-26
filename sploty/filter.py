@@ -1,19 +1,19 @@
-import glob
 import json
+from pathlib import Path
 
 import pandas as pd
 from pandas.errors import EmptyDataError
 from settings import logger
 
 CONFIG_FILE = "config.json"
-with open(CONFIG_FILE, encoding="utf8") as file:
+with Path(CONFIG_FILE).open(encoding="utf8") as file:
     CONFIG = json.load(file)
 
 # Files
 RESOURCES_FOLDER = CONFIG["file"]["resources_folder"]
 
 YOUR_STREAMING_HISTORY_FILES = "StreamingHistory*.json"
-YOUR_STREAMING_HISTORY_PATHS = list(glob.glob(RESOURCES_FOLDER + "/" + YOUR_STREAMING_HISTORY_FILES))
+YOUR_STREAMING_HISTORY_PATHS = list(Path(RESOURCES_FOLDER).glob(YOUR_STREAMING_HISTORY_FILES))
 
 ALL_YOUR_STREAMING_HISTORY_FILE = "AllStreamingHistory.csv"
 ALL_YOUR_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + ALL_YOUR_STREAMING_HISTORY_FILE
