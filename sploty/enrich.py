@@ -2,6 +2,7 @@ import json
 import time
 from enum import Enum
 from http import HTTPStatus
+from itertools import batched
 from pathlib import Path
 
 import numpy as np
@@ -59,21 +60,6 @@ class BoldColor(str, Enum):
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
     END = "\033[0m"
-
-
-def chunks_iter(iterable, chunk_size):
-    """Yield successive n-sized chunks from iter."""
-    iterable = iter(iterable)
-    while True:
-        chunk = []
-        try:
-            for _ in range(chunk_size):
-                chunk.append(next(iterable))
-            yield chunk
-        except StopIteration:
-            if chunk:
-                yield chunk
-            break
 
 
 def do_spotify_request(url, headers, params=None):
@@ -177,7 +163,7 @@ def better_enrich(df_tableau):
     dict_all = {}
     target = len(df)
     checkpoint = 0
-    for rows in chunks_iter(df.iterrows(), CHUNK_SIZE):
+    for rows in batched(df.iterrows(), CHUNK_SIZE):
         logger.info(
             BoldColor.PURPLE
             + "["
