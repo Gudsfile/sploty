@@ -1,6 +1,7 @@
 import json
 import time
 from http import HTTPStatus
+from itertools import batched
 from pathlib import Path
 
 import pandas as pd
@@ -50,23 +51,6 @@ SPOTIFY_HEADERS = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
 DB_PATH = CONFIG["tinydb"]["track_audio_features"]
 DB = TinyDB(DB_PATH)
 
-# TODO factorize code (enrich.py)
-
-
-def chunks_iter(iterable, chunk_size):
-    """Yield successive n-sized chunks from iter."""
-    iterable = iter(iterable)
-    while True:
-        chunk = []
-        try:
-            for _ in range(chunk_size):
-                chunk.append(next(iterable))
-            yield chunk
-        except StopIteration:
-            if chunk:
-                yield chunk
-            break
-
 
 def do_spotify_request(url, headers, params=None):
     try:
@@ -99,7 +83,7 @@ def inserts_in_db(db, data):
 
 
 def inserts_enriched_tracks(db, tracks_uri, chunk_size):
-    for chunk in chunks_iter(tracks_uri, chunk_size):
+    for chunk in batched(tracks_uri, chunk_size):
         track_audio_features = get_track_audio_features(chunk)
         track_audio_features_without_none_value = [taf for taf in track_audio_features if taf]
         inserts_in_db(db, track_audio_features_without_none_value)

@@ -50,4 +50,4 @@ jobs:
 
     - name: Lint with ruff
       run: |
-        poetry run ruff check --ignore ANN001,ANN201,PERF401
+        poetry run ruff check --ignore ANN001,ANN201
