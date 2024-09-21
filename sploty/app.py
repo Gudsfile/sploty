@@ -4,7 +4,7 @@ from pathlib import Path
 import pydantic_argparse
 from pydantic.v1 import BaseModel, Field
 
-from sploty import concat, enrich, filter
+from sploty import audio_features, concat, enrich, filter
 from sploty.settings import logger
 
 
@@ -14,6 +14,7 @@ class Arguments(BaseModel):
     chunk_size: int = Field(default=100, description="an optional int")
     spotify_timeout: int = Field(default=10, description="an optional int")
     spotify_sleep: int = Field(default=60, description="an optional int")
+    db_path: str = Field(description="a required string")
     concat: bool = Field(default=True)
     filter: bool = Field(default=True)
     enrich: bool = Field(default=True)
@@ -40,6 +41,9 @@ def main() -> None:
     to_enrich_streaming_history_path = Path(f"{resources_path}/sploty_filtered_history.csv")
     enriched_streaming_history_path = Path(f"{resources_path}/sploty_enriched_history.csv")
     featured_streaming_history_path = Path(f"{resources_path}/sploty_featured_history.csv")  # noqa: F841
+
+    db_path = args.db_path
+    audio_features_db_path = Path(f"{db_path}/tracks.json")
 
     # Process
     logger.info("============== CONCAT ==============")
@@ -76,6 +80,31 @@ def main() -> None:
             enriched_streaming_history_path,
             args.chunk_size,
             spotify_api_params,
+        )
+    else:
+        logger.info("skip")
+    logger.info("============= FEATURES =============")
+    if args.feature:
+        db = audio_features.get_db(audio_features_db_path)
+        spotify_api_params = enrich.SpotifyApiParams(
+            base_url="https://api.spotify.com/v1/",
+            endpoint="audio-features",
+            url="https://api.spotify.com/v1/audio-features/",
+            headers=enrich.get_spotify_auth_header(
+                "https://accounts.spotify.com/api/token",
+                os.environ["SPOTIFY_CLIENT_ID"],
+                os.environ["SPOTIFY_CLIENT_SECRET"],
+                args.spotify_timeout,
+            ),
+            timeout=args.spotify_timeout,
+            sleep=args.spotify_sleep,
+        )
+        audio_features.main(
+            to_enrich_streaming_history_path,
+            enriched_streaming_history_path,
+            args.chunk_size,
+            spotify_api_params,
+            db,
         )
     else:
         logger.info("skip")
