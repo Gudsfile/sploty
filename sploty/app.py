@@ -10,6 +10,11 @@ from sploty.settings import logger
 class Arguments(BaseModel):
     resources_path: str = Field(description="a required string")
     previous_enriched_streaming_history_path: str = Field(None, description="an optional string")
+    concat: bool = Field(default=True)
+    filter: bool = Field(default=True)
+    enrich: bool = Field(default=True)
+    feature: bool = Field(default=True)
+    elastic: bool = Field(default=True)
 
 
 def main() -> None:
@@ -32,13 +37,19 @@ def main() -> None:
     enriched_streaming_history_path = Path(f"{resources_path}/sploty_enriched_history.csv")
     # Process
     logger.info("============== CONCAT ==============")
-    concat.main(streaming_history_paths, concated_streaming_history_path)
+    if args.concat:
+        concat.main(streaming_history_paths, concated_streaming_history_path)
+    else:
+        logger.info("skip")
     logger.info("============== FILTER ==============")
-    filter.main(
-        concated_streaming_history_path,
-        to_enrich_streaming_history_path,
-        args.previous_enriched_streaming_history_path or enriched_streaming_history_path,
-    )
+    if args.filter:
+        filter.main(
+            concated_streaming_history_path,
+            to_enrich_streaming_history_path,
+            args.previous_enriched_streaming_history_path or enriched_streaming_history_path,
+        )
+    else:
+        logger.info("skip")
 
 
 if __name__ == "__main__":
