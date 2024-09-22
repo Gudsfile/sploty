@@ -4,7 +4,7 @@ from pathlib import Path
 import pydantic_argparse
 from pydantic.v1 import BaseModel, Field
 
-from sploty import audio_features, concat, enrich, filter
+from sploty import audio_features, concat, enrich, filter, to_elastic
 from sploty.settings import logger
 
 
@@ -15,6 +15,8 @@ class Arguments(BaseModel):
     spotify_timeout: int = Field(default=10, description="an optional int")
     spotify_sleep: int = Field(default=60, description="an optional int")
     db_path: str = Field(description="a required string")
+    index_name: str = Field(description="a required string")
+    elastic_timeout: int = Field(default=10, description="an optional int")
     concat: bool = Field(default=True)
     filter: bool = Field(default=True)
     enrich: bool = Field(default=True)
@@ -106,6 +108,17 @@ def main() -> None:
             spotify_api_params,
             db,
         )
+    else:
+        logger.info("skip")
+    logger.info("============== ELASTIC =============")
+    if args.elastic:
+        elastic = to_elastic.get_elastic(
+            os.environ["ELASTIC_HOSTS"].split(","),
+            os.environ["ELASTIC_USER"],
+            os.environ["ELASTIC_PASS"],
+            args.elastic_timeout,
+        )
+        to_elastic.main(enriched_streaming_history_path, args.index_name, elastic)
     else:
         logger.info("skip")
 
