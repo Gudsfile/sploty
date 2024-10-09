@@ -1,37 +1,40 @@
 # Sploty
 
-Visualize and understand my Spotify data.
+🎧 Visualize and understand my Spotify data.
 
 🚧 Work-in-progress repository
 
 - [How do I configure Sploty?](#how-do-i-configure-sploty)
 - [How do I use Sploty?](#how-do-i-use-sploty)
 
-## How do I configure Sploty? 
+## How do I configure Sploty?
 
-Clone the repository
+Clone this repository.
 
-Install [Poetry](https://python-poetry.org)
+Install [Poetry](https://python-poetry.org).
 
-Create the virtualenv with Poetry
+Create the virtualenv and install the dependencies with Poetry
 
 ```shell
 poetry install
 poetry run python --version
 ```
 
-The config file must be copied and completed
+This project uses environment variables such as `spotify_client_id`.
+You can export them or use a `.env` file and poetry with [poetry-dotenv-plugin](https://github.com/mpeteuil/poetry-dotenv-plugin).
+
+Environment variables are specified in the `sample.env` file, copy it and complete it
 
 ```shell
-cp config.default.json config.json
+cp sample.env .env
 ```
 
-- [Complete it with Spotify](#spotify)
-- [Complete it with Elasticsearch](#elasticsearch)
+- [Complete it with the Spotify configuration](#spotify)
+- [Complete it with the Elasticsearch configuration](#elasticsearch)
 
-#### Spotify
+### Spotify
 
-Sploty requires a Spotify developer account, look at the [Spotify documentation](https://developer.spotify.com/documentation/web-api/tutorials/getting-started) to set it up
+Sploty requires a Spotify developer account, look at the [Spotify documentation](https://developer.spotify.com/documentation/web-api/tutorials/getting-started) to set it up.
 
 Retrieve the customer's id and secret and complete the `.env` file
 
@@ -42,9 +45,11 @@ SPOTIFY_AUTH_URL="https://accounts.spotify.com/api/token"
 SPOTIFY_BASE_URL="https://api.spotify.com/v1/"
 ```
 
-#### Elasticsearch
+Timeout and sleep could be configured with the Sploty args.
 
-The final part (`to_elastic.py`) required Elasticsearch, have a look at [`docker-elk`](https://github.com/deviantony/docker-elk)
+### Elasticsearch
+
+The final part (`to_elastic.py`) required Elasticsearch, have a look at [`docker-elk`](https://github.com/deviantony/docker-elk) to configure it locally.
 
 Retrieve host, username and password and complete the `.env` file
 
@@ -54,9 +59,11 @@ ELASTIC_USER="YOUR ELASTIC USERNAME"
 ELASTIC_PASS="YOUR ELASTIC PASSWORD"
 ```
 
+Timeout and index name could be configured with the Sploty args.
+
 ## How do I use Sploty?
 
-### Download your data
+### ⬇️ Download your data
 
 1. Request your spotify data on [your spotify account](https://www.spotify.com/account/privacy/)
    - Select *Extended streaming history*"
@@ -64,7 +71,7 @@ ELASTIC_PASS="YOUR ELASTIC PASSWORD"
 2. 30 days later
 3. Open the mail from Spotify and download files
 
-### Transform your data 
+### 🚀 Transform your data 
 
 Run the app
 
@@ -75,9 +82,54 @@ poetry run python sploty/app.py \
   --index-name your-index-name
 ```
 
-### Visualize your data
+#### But what does the app do?
 
-Open Kibana ([`http://localhost:5601`](http://localhost:5601) avec `docker-elk`) and create a dashboard to query your index
+The app will : 
+1. Concat all streams files with `sploty/concat.py`
+2. Filter already enriched streams with poetry run `sploty/filter.py`
+3. Enrich spotify metadata with `sploty/enrich.py`
+   - The Spotify API is used at this stage, don't forget to [configure it](#spotify)
+4. Enrich spotify audio features with  `sploty/audio_features.py`
+   - The Spotify API is used at this stage, don't forget to [configure it](#spotify)
+   - A `json database` ([TinyDB](https://github.com/msiemens/tinydb)) is used at this stage to reduce Spotify API calls by storing tracks data
+5. Index their to elastic with `sploty/to_elastic.py`
+   - Elasticsearch is used at this stage, don't forget to [configure it](#elasticsearch)
+
+#### How to display the help message?
+
+Use the `--help` option
+
+```shell
+poetry run python sploty/app.py --help
+```
+
+#### How to use a previous `sploty_enriched_history` file?
+
+By default, the `sploty_enriched_history` file in the resources folder is used, but you can choose another one with the `--previous-enriched-streaming-history-path` option
+
+```shell
+poetry run python sploty/app.py … --previous-enriched-streaming-history-path your/path/to/another/sploty_enriched_history.csv
+```
+
+#### How to skip a part?
+
+Use the `-no-<the part>` options
+
+```shell
+poetry run python sploty/app.py … --no-concat --no-filter --no-enrich --no-feature --no-elastic
+```
+
+#### How to increase or reduce the number of lines processed at once?
+
+Use the `--chunk-size` option, default is 100
+
+```shell
+poetry run python sploty/app.py … --chunk-size 101
+```
+
+### 👀 Visualize your data
+
+Open Kibana ([`http://localhost:5601`](http://localhost:5601) with `docker-elk`) and create a dashboard to query your index
 
 🚧 This part is not yet in the repository
 
