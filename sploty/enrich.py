@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 from http import HTTPStatus
@@ -207,38 +206,3 @@ def get_spotify_auth_header(auth_url, client_id, client_secret, timeout):
     )
     auth_response_data = auth_response.json()
     return {"Authorization": f"Bearer {auth_response_data['access_token']}"}
-
-
-if __name__ == "__main__":
-    CONFIG_FILE = "config.json"
-    with Path(CONFIG_FILE).open(encoding="utf8") as file:
-        CONFIG = json.load(file)
-
-    CHUNK_SIZE = CONFIG["file"]["chunk_size"]
-
-    # Files
-    RESOURCES_FOLDER = CONFIG["file"]["resources_folder"]
-    ALL_STREAMING_HISTORY_TO_ENRICH_FILE = "AllStreamingHistoryToEnrich.csv"
-    ALL_STREAMING_HISTORY_TO_ENRICH_PATH = RESOURCES_FOLDER + "/" + ALL_STREAMING_HISTORY_TO_ENRICH_FILE
-
-    ENRICHED_STREAMING_HISTORY_FILE = "AllEnrichedStreamingHistory.csv"
-    ENRICHED_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + ENRICHED_STREAMING_HISTORY_FILE
-
-    # Spotify's authentication and config
-    SPOTIFY_CLIENT_ID = CONFIG["spotify"]["client_id"]
-    SPOTIFY_CLIENT_SECRET = CONFIG["spotify"]["client_secret"]
-    SPOTIFY_AUTH_URL = CONFIG["spotify"]["auth_url"]
-    SPOTIFY_BASE_URL = CONFIG["spotify"]["base_url"]
-    SPOTIFY_SLEEP = CONFIG["spotify"]["s_sleep"]
-    SPOTIFY_TIMEOUT = CONFIG["spotify"]["timeout"]
-
-    SPOTIFY_API_PARAMS = SpotifyApiParams(
-        base_url=SPOTIFY_BASE_URL,
-        endpoint="tracks",
-        url=f"{SPOTIFY_BASE_URL}/tracks/",
-        headers=get_spotify_auth_header(SPOTIFY_AUTH_URL, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_TIMEOUT),
-        timeout=SPOTIFY_TIMEOUT,
-        sleep=SPOTIFY_SLEEP,
-    )
-
-    main(ALL_STREAMING_HISTORY_TO_ENRICH_PATH, ENRICHED_STREAMING_HISTORY_PATH, CHUNK_SIZE, SPOTIFY_API_PARAMS)

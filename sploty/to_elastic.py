@@ -1,6 +1,5 @@
 import json
 import logging
-from pathlib import Path
 
 import pandas as pd
 from elasticsearch import Elasticsearch, helpers
@@ -88,25 +87,3 @@ def get_elastic(hosts, username, password, timeout):
     elastic = Elasticsearch(hosts=hosts, basic_auth=(username, password))
     elastic.options(request_timeout=timeout)
     return elastic
-
-
-if __name__ == "__main__":
-    CONFIG_FILE = "config.json"
-
-    with Path(CONFIG_FILE).open(encoding="utf8") as file:
-        CONFIG = json.load(file)
-
-    # Files
-    RESOURCES_FOLDER = CONFIG["file"]["resources_folder"]
-    ENRICHED_STREAMING_HISTORY_FILE = "AllEnrichedStreamingHistory.csv"
-    ENRICHED_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + ENRICHED_STREAMING_HISTORY_FILE
-
-    # Elastic authentication and config
-    ELASTIC_HOSTS = CONFIG["elasticsearch"]["hosts"]
-    ELASTIC_USER = CONFIG["elasticsearch"]["username"]
-    ELASTIC_PASS = CONFIG["elasticsearch"]["password"]
-    ELASTIC_INDEX_NAME = CONFIG["elasticsearch"]["index"]["name"]
-    ELASTIC_TIMEOUT = CONFIG["elasticsearch"]["request_timeout"]
-    ELASTIC = get_elastic(ELASTIC_HOSTS, ELASTIC_USER, ELASTIC_PASS, ELASTIC_TIMEOUT)
-
-    main(ENRICHED_STREAMING_HISTORY_PATH, ELASTIC_INDEX_NAME, ELASTIC)

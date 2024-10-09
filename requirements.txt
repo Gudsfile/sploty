@@ -1,6 +1,0 @@
-requests
-pandas
-numpy
-spotipy
-elasticsearch
-tinydb

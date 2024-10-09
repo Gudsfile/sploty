@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 import logging
-from pathlib import Path
 
 import pandas as pd
 from pandas.errors import EmptyDataError
@@ -40,24 +38,3 @@ def main(concated_path: list, to_enrich_path: str, enriched_path: str | None = N
     # Save stream to enrich
     df_stream.to_csv(to_enrich_path, mode="w", index=False)
     logger.info("%i rows are saved at %s", len(df_stream), to_enrich_path)
-
-
-if __name__ == "__main__":
-    CONFIG_FILE = "config.json"
-
-    with Path(CONFIG_FILE).open(encoding="utf8") as file:
-        CONFIG = json.load(file)
-
-    # Files
-    RESOURCES_FOLDER = CONFIG["file"]["resources_folder"]
-
-    ALL_STREAMING_HISTORY_FILE = "AllStreamingHistory.csv"
-    ALL_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + ALL_STREAMING_HISTORY_FILE
-
-    ALL_STREAMING_HISTORY_TO_ENRICH_FILE = "AllStreamingHistoryToEnrich.csv"
-    ALL_STREAMING_HISTORY_TO_ENRICH_PATH = RESOURCES_FOLDER + "/" + ALL_STREAMING_HISTORY_TO_ENRICH_FILE
-
-    ENRICHED_STREAMING_HISTORY_FILE = "AllEnrichedStreamingHistory.csv"
-    ENRICHED_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + ENRICHED_STREAMING_HISTORY_FILE
-
-    main(ALL_STREAMING_HISTORY_FILE, ALL_STREAMING_HISTORY_TO_ENRICH_FILE, ENRICHED_STREAMING_HISTORY_PATH)
