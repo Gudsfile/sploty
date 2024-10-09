@@ -1,27 +1,39 @@
-import os
+from __future__ import annotations
+
 from pathlib import Path
 
 import pydantic_argparse
-from pydantic.v1 import BaseModel, Field
+from pydantic import Field, HttpUrl, v1
+from pydantic_settings import BaseSettings
 
 from sploty import audio_features, concat, enrich, filter, to_elastic
 from sploty.settings import logger
 
 
-class Arguments(BaseModel):
-    resources_path: str = Field(description="a required string")
-    previous_enriched_streaming_history_path: str = Field(None, description="an optional string")
-    chunk_size: int = Field(default=100, description="an optional int")
-    spotify_timeout: int = Field(default=10, description="an optional int")
-    spotify_sleep: int = Field(default=60, description="an optional int")
-    db_path: str = Field(description="a required string")
-    index_name: str = Field(description="a required string")
-    elastic_timeout: int = Field(default=10, description="an optional int")
-    concat: bool = Field(default=True)
-    filter: bool = Field(default=True)
-    enrich: bool = Field(default=True)
-    feature: bool = Field(default=True)
-    elastic: bool = Field(default=True)
+class Arguments(v1.BaseModel):
+    resources_path: str = v1.Field(description="a required string")
+    previous_enriched_streaming_history_path: str = v1.Field(None, description="an optional string")
+    chunk_size: int = v1.Field(default=100, description="an optional int")
+    spotify_timeout: int = v1.Field(default=10, description="an optional int")
+    spotify_sleep: int = v1.Field(default=60, description="an optional int")
+    db_path: str = v1.Field(description="a required string")
+    index_name: str = v1.Field(description="a required string")
+    elastic_timeout: int = v1.Field(default=10, description="an optional int")
+    concat: bool = v1.Field(default=True)
+    filter: bool = v1.Field(default=True)
+    enrich: bool = v1.Field(default=True)
+    feature: bool = v1.Field(default=True)
+    elastic: bool = v1.Field(default=True)
+
+
+class Environment(BaseSettings):
+    spotify_client_id: str = Field(description="a required string")
+    spotify_client_secret: str = Field(description="a required string")
+    spotify_auth_url: HttpUrl = Field(description="a required string")
+    spotify_base_url: HttpUrl = Field(description="a required string")
+    elastic_hosts: list[HttpUrl] = Field(description="a required string")
+    elastic_user: str = Field(description="a required string")
+    elastic_pass: str = Field(description="a required string")
 
 
 def main() -> None:
@@ -34,6 +46,7 @@ def main() -> None:
         epilog="Example Epilog",
     )
     args = parser.parse_typed_args()
+    env = Environment()
 
     # Paths
     resources_path = args.resources_path
@@ -70,8 +83,8 @@ def main() -> None:
             url="https://api.spotify.com/v1/tracks/",
             headers=enrich.get_spotify_auth_header(
                 "https://accounts.spotify.com/api/token",
-                os.environ["SPOTIFY_CLIENT_ID"],
-                os.environ["SPOTIFY_CLIENT_SECRET"],
+                env.spotify_client_id,
+                env.spotify_client_secret,
                 args.spotify_timeout,
             ),
             timeout=args.spotify_timeout,
@@ -94,8 +107,8 @@ def main() -> None:
             url="https://api.spotify.com/v1/audio-features/",
             headers=enrich.get_spotify_auth_header(
                 "https://accounts.spotify.com/api/token",
-                os.environ["SPOTIFY_CLIENT_ID"],
-                os.environ["SPOTIFY_CLIENT_SECRET"],
+                env.spotify_client_id,
+                env.spotify_client_secret,
                 args.spotify_timeout,
             ),
             timeout=args.spotify_timeout,
@@ -113,9 +126,9 @@ def main() -> None:
     logger.info("============== ELASTIC =============")
     if args.elastic:
         elastic = to_elastic.get_elastic(
-            os.environ["ELASTIC_HOSTS"].split(","),
-            os.environ["ELASTIC_USER"],
-            os.environ["ELASTIC_PASS"],
+            list(map(str, env.elastic_hosts)),
+            env.elastic_user,
+            env.elastic_pass,
             args.elastic_timeout,
         )
         to_elastic.main(enriched_streaming_history_path, args.index_name, elastic)
