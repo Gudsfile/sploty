@@ -32,7 +32,7 @@ class CustomFormatter(logging.Formatter):
     bold_red = "\x1b[31;1m"
     bold = "\033[1m"
     reset = "\x1b[0m"
-    format = "{color}%(asctime)s - %(name)s - %(levelname)-8s -{reset} %(message)s (%(filename)s:%(lineno)d)"
+    format = "{color}%(asctime)s - %(name)-25s - %(levelname)-8s -{reset} %(message)s {color}- %(filename)s:%(lineno)d{reset}"
 
     FORMATS: ClassVar[dict[int, str]] = {
         logging.DEBUG: format.format(color=cyan, reset=reset),
