@@ -82,7 +82,6 @@ def main(enriched_path: str, index_name: str, elastic):
     json_tmp = json.loads(df_stream.to_json(orient="records"))
     logger.debug("%s", json_tmp[-1])
     set_multidata(elastic, json_tmp, index_name)
-    set_multidata(elastic, json_tmp, index_name)
 
 
 def get_elastic(hosts, username, password, timeout):
