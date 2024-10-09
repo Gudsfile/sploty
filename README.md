@@ -33,32 +33,25 @@ cp config.default.json config.json
 
 Sploty requires a Spotify developer account, look at the [Spotify documentation](https://developer.spotify.com/documentation/web-api/tutorials/getting-started) to set it up
 
-Retrieve the customer's id and secret and complete the `config.json` file
+Retrieve the customer's id and secret and complete the `.env` file
 
-```json
-    "spotify": {
-        …
-        "client_id": "TO BE COMPLETED",
-        "client_secret": "TO BE COMPLETED",
-        …
-    },
+```bash
+SPOTIFY_CLIENT_ID="YOUR SPOTIFY CLIENT ID"
+SPOTIFY_CLIENT_SECRET="YOUR SPOTIFY CLIENT SECRET"
+SPOTIFY_AUTH_URL="https://accounts.spotify.com/api/token"
+SPOTIFY_BASE_URL="https://api.spotify.com/v1/"
 ```
 
 #### Elasticsearch
 
 The final part (`to_elastic.py`) required Elasticsearch, have a look at [`docker-elk`](https://github.com/deviantony/docker-elk)
 
-Retrieve host, useername and password and complete the `config.json` file
+Retrieve host, username and password and complete the `.env` file
 
-```json
-    "elasticsearch": {
-        "hosts": [
-            "TO BE COMPLETED"
-        ],
-        "username": "TO BE COMPLETED",
-        "password": "TO BE COMPLETED",
-        …
-    },
+```bash
+ELASTIC_HOSTS=["YOUR ELASTIC HOST"]
+ELASTIC_USER="YOUR ELASTIC USERNAME"
+ELASTIC_PASS="YOUR ELASTIC PASSWORD"
 ```
 
 ## How do I use Sploty?
@@ -73,28 +66,14 @@ Retrieve host, useername and password and complete the `config.json` file
 
 ### Transform your data 
 
-1. Concat all streams files with
-   ```shell
-   poetry run python sploty/concat.py
-   ```
-2. Filter already enriched streams with
-   ```shell
-   poetry run python sploty/filter.py
-   ```
-3. Enrich spotify metadata with
-   ```shell
-   poetry run python sploty/enrich.py
-   ```
-4. Enrich spotify audio features with 
-   ```shell
-   poetry run python sploty/audio_features.py
-   ```
-   :bug: There's a bug: there's a shift in the columns
-5. Index their to elastic with
-   ```shell
-   poetry run python sploty/to_elastic.py
-   ```
-   This part required Elasticsearch, have a look at [`docker-elk`](https://github.com/deviantony/docker-elk)
+Run the app
+
+```shell
+poetry run python sploty/app.py \
+  --resources-path your/path/to/the/extended_streaming_history_folder/ \
+  --db-path your/path/to/a/folder/to/save/tracks/data \
+  --index-name your-index-name
+```
 
 ### Visualize your data
 

@@ -1,6 +1,4 @@
-import json
 import logging
-from pathlib import Path
 
 import pandas as pd
 from pandas import DatetimeIndex
@@ -63,20 +61,3 @@ def main(input_paths: list, concated_path: str):
     # Save stream history
     df_stream.to_csv(concated_path, mode="w", index=False)
     logger.info("%i rows are saved at %s", len(df_stream), concated_path)
-    logger.info("%i rows are saved at %s", len(df_stream), concated_path)
-
-
-if __name__ == "__main__":
-    CONFIG_FILE = "config.json"
-
-    with Path(CONFIG_FILE).open(encoding="utf8") as file:
-        CONFIG = json.load(file)
-
-    # Files
-    RESOURCES_FOLDER = CONFIG["file"]["resources_folder"]
-
-    STREAMING_HISTORY_FILES = "Streaming_History_Audio_*.json"
-    STREAMING_HISTORY_PATHS = list(Path(RESOURCES_FOLDER).glob(STREAMING_HISTORY_FILES))
-    YOUR_STREAMING_HISTORY_FILE = "AllStreamingHistory.csv"
-    YOUR_STREAMING_HISTORY_PATH = RESOURCES_FOLDER + "/" + YOUR_STREAMING_HISTORY_FILE
-    main(STREAMING_HISTORY_PATHS, YOUR_STREAMING_HISTORY_PATH)
