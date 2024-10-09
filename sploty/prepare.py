@@ -1,7 +1,8 @@
 import json
+import logging
 from pathlib import Path
 
-from settings import logger
+logger = logging.getLogger(__name__)
 
 CONFIG_FILE = "config.json"
 with Path(CONFIG_FILE).open(encoding="utf8") as file:
@@ -24,5 +25,4 @@ with Path(YOUR_LIBRARY_PATH).open(encoding="utf8") as file:
 your_library_tracks = your_library["tracks"]
 with Path(YOUR_LIBRARY_TRACKS_PATH).open("w", encoding="UTF-8") as file:
     json.dump(your_library_tracks, file)
-logger.info("library tracks saved in %s", YOUR_LIBRARY_TRACKS_PATH)
 logger.info("library tracks saved in %s", YOUR_LIBRARY_TRACKS_PATH)

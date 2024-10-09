@@ -50,12 +50,14 @@ class CustomFormatter(logging.Formatter):
 
 
 logger = logging.getLogger("sploty")
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
-handler.setFormatter(CustomFormatter())
-logger.addHandler(handler)
-logger.propagate = False
+
+if not logger.hasHandlers():
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(CustomFormatter())
+    logger.addHandler(handler)
+    logger.propagate = False
 
 if __name__ == "__main__":
     logger.debug("%i rows on %s", 185338, 200000)
