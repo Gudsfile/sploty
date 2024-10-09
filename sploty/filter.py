@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pandas as pd
 from pandas.errors import EmptyDataError
-from settings import logger
+
+logger = logging.getLogger(__name__)
 
 
 def main(concated_path: list, to_enrich_path: str, enriched_path: str | None = None):

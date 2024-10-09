@@ -1,9 +1,11 @@
 import json
+import logging
 from pathlib import Path
 
 import pandas as pd
 from elasticsearch import Elasticsearch, helpers
-from settings import logger
+
+logger = logging.getLogger(__name__)
 
 
 def bulk_factory(df, index_name):

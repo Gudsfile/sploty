@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from http import HTTPStatus
 from itertools import batched
@@ -8,8 +9,9 @@ import pandas as pd
 import requests
 from pydantic import BaseModel, HttpUrl
 from requests.exceptions import HTTPError
-from settings import logger
 from tinydb import TinyDB
+
+logger = logging.getLogger(__name__)
 
 
 class SpotifyApiParams(BaseModel):

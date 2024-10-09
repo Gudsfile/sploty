@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from http import HTTPStatus
 from itertools import batched
@@ -9,7 +10,9 @@ import pandas as pd
 import requests
 from pydantic import BaseModel, HttpUrl
 from requests.exceptions import HTTPError
-from settings import BoldColor, logger
+from settings import BoldColor
+
+logger = logging.getLogger(__name__)
 
 
 class SpotifyApiParams(BaseModel):
@@ -129,7 +132,7 @@ def better_enrich(df_tableau, chunk_size, enriched_path, spotify_api_params):
     checkpoint = 0
     for rows in batched(df.iterrows(), chunk_size):
         logger.info(
-            BoldColor.PURPLE
+            BoldColor.PURPLE  # noqa: G003
             + "["
             + ("-" * int(checkpoint * 60 / target)).ljust(60, " ")
             + "]"

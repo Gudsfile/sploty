@@ -1,9 +1,11 @@
 import json
+import logging
 from pathlib import Path
 
 import pandas as pd
 from pandas import DatetimeIndex
-from settings import logger
+
+logger = logging.getLogger(__name__)
 
 
 def header_converter(df):
