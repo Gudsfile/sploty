@@ -52,7 +52,7 @@ def do_spotify_request(spotify_api_params: SpotifyApiParams, params=None, retry=
                 retry + 1,
                 spotify_api_params.sleep,
             )
-            time.sleep(spotify_api_params.sleep * min(retry + 1))
+            time.sleep(spotify_api_params.sleep * (retry + 1))
             return do_spotify_request(spotify_api_params, params, retry + 1)
         logger.warning("ConnectionError - %s (skipping)", err)
         raise

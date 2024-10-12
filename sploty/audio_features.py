@@ -53,7 +53,7 @@ def do_spotify_request(spotify_api_params: SpotifyApiParams, params=None, retry=
                 retry + 1,
                 spotify_api_params.sleep,
             )
-            time.sleep(spotify_api_params.sleep * min(retry + 1))
+            time.sleep(spotify_api_params.sleep * (retry + 1))
             return do_spotify_request(spotify_api_params, params, retry + 1)
         logger.warning("ConnectionError - %s (skipping)", err)
         raise
@@ -144,9 +144,9 @@ def main(  # noqa: PLR0913
     )
     df_completed_streams.to_csv(featured_path, mode="w", index=False)
     logger.info(
-        "%i rows are re-saved at %s with audio features completed",
+        "%i rows are saved at %s with audio features completed",
         len(df_completed_streams),
-        enriched_path,
+        featured_path,
     )
 
 
