@@ -6,7 +6,7 @@ from itertools import batched
 import pandas as pd
 import requests
 from pydantic import BaseModel, HttpUrl
-from requests.exceptions import HTTPError
+from requests.exceptions import ConnectionError, HTTPError
 from tinydb import TinyDB
 
 logger = logging.getLogger(__name__)
@@ -19,9 +19,10 @@ class SpotifyApiParams(BaseModel):
     headers: dict
     timeout: float
     sleep: float
+    connection_error_retry: int = 5
 
 
-def do_spotify_request(spotify_api_params: SpotifyApiParams, params=None):
+def do_spotify_request(spotify_api_params: SpotifyApiParams, params=None, retry=0):
     try:
         response = requests.get(
             spotify_api_params.url,
@@ -43,6 +44,18 @@ def do_spotify_request(spotify_api_params: SpotifyApiParams, params=None):
             time.sleep(spotify_api_params.sleep)
             return do_spotify_request(spotify_api_params, params)
         logger.warning("HTTPError - %s (skipping)", err)
+        raise
+    except ConnectionError as err:
+        if retry < spotify_api_params.connection_error_retry:
+            logger.warning(
+                "ConnectionError - %s (retry %i/5 sleeping %is...)",
+                err,
+                retry + 1,
+                spotify_api_params.sleep,
+            )
+            time.sleep(spotify_api_params.sleep * min(retry + 1))
+            return do_spotify_request(spotify_api_params, params, retry + 1)
+        logger.warning("ConnectionError - %s (skipping)", err)
         raise
 
 
