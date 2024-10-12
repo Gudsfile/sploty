@@ -89,7 +89,14 @@ def completes_streams_with_audio_features(df_left, left_key, df_right, right_key
 # len(db.all())#noqa: ERA001
 
 
-def main(to_enrich_path: list, enriched_path: str, chunk_size: int, spotify_api_params: SpotifyApiParams, db: TinyDB):
+def main(  # noqa: PLR0913
+    to_enrich_path: list,
+    enriched_path: str,
+    featured_path: str,
+    chunk_size: int,
+    spotify_api_params: SpotifyApiParams,
+    db: TinyDB,
+):
     # get the audio features of tracks saved it in the TinyDb
     df_stream = pd.read_csv(to_enrich_path)
     logger.info("%i streams", len(df_stream))
@@ -122,7 +129,7 @@ def main(to_enrich_path: list, enriched_path: str, chunk_size: int, spotify_api_
         df_audio_features,
         "id",
     )
-    df_completed_streams.to_csv(enriched_path, mode="w", index=False)
+    df_completed_streams.to_csv(featured_path, mode="w", index=False)
     logger.info(
         "%i rows are re-saved at %s with audio features completed",
         len(df_completed_streams),
