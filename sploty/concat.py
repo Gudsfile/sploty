@@ -1,20 +1,8 @@
 import logging
 
 import pandas as pd
-from pandas import DatetimeIndex
 
 logger = logging.getLogger(__name__)
-
-
-def header_converter(df):
-    return df.rename(
-        columns={
-            "endTime": "end_time",
-            "msPlayed": "ms_played",
-            "artistName": "artist_name",
-            "trackName": "track_name",
-        },
-    )
 
 
 def main(input_paths: list, concated_path: str):
@@ -23,7 +11,7 @@ def main(input_paths: list, concated_path: str):
     concated_path: file to write concated streaming history
     """
     # Read streaming files
-    df_stream = header_converter(pd.concat(map(pd.read_json, input_paths)))
+    df_stream = pd.concat(map(pd.read_json, input_paths))
     logger.info("%i rows in %s", len(df_stream), input_paths)
 
     df_stream = df_stream.drop_duplicates()
@@ -43,16 +31,6 @@ def main(input_paths: list, concated_path: str):
         axis=1,
     )
 
-    df_stream["track_src_id"] = df_stream.artist_name + ":" + df_stream.track_name
-    df_stream["year"] = DatetimeIndex(df_stream.end_time).year.map(lambda x: f"{x:0>4}")
-    df_stream["month"] = (DatetimeIndex(df_stream.end_time).month).map(lambda x: f"{x:0>2}")
-    df_stream["month_name"] = DatetimeIndex(df_stream.end_time).month_name()
-    df_stream["day"] = DatetimeIndex(df_stream.end_time).day.map(lambda x: f"{x:0>2}")
-    df_stream["hour"] = DatetimeIndex(df_stream.end_time).hour.map(lambda x: f"{x:0>2}")
-    df_stream["minute"] = DatetimeIndex(df_stream.end_time).minute.map(lambda x: f"{x:0>2}")
-    # ":04" writting is fixed in Python 3.10+ : https://stackoverflow.com/a/36044788
-
-    df_stream["min_played"] = df_stream.ms_played / 1000 / 60
     df_stream["id"] = df_stream.end_time + ":" + df_stream.track_uri
 
     df_stream["date"] = pd.to_datetime(df_stream.end_time)
