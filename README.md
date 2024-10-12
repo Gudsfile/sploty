@@ -66,7 +66,7 @@ Timeout and index name could be configured with the Sploty args.
 ### ⬇️ Download your data
 
 1. Request your spotify data on [your spotify account](https://www.spotify.com/account/privacy/)
-   - Select *Extended streaming history*"
+   - Select "*Extended streaming history*"
    - Click on "*Request data*"
 2. 30 days later
 3. Open the mail from Spotify and download files
