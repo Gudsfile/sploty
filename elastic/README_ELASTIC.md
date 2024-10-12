@@ -17,14 +17,19 @@ PUT _ingest/pipeline/spotify-stream-pipeline
   {"rename": { "field": "track_duration_ms", "target_field": "track.duration_ms", "ignore_missing": true }},
   {"rename": { "field": "track_popularity", "target_field": "track.popularity", "ignore_missing": true }},
   {"rename": { "field": "track_is_in_library", "target_field": "track.is_in_library", "ignore_missing": true }},
-  {"rename": { "field": "track_is_unplayable", "target_field": "track.is_unplayable", "ignore_missing": true }},
+  {"rename": { "field": "track_is_explicit", "target_field": "track.is_explicit", "ignore_missing": true }},
+  {"rename": { "field": "track_is_local", "target_field": "track.is_local", "ignore_missing": true }},
+  {"rename": { "field": "track_is_playable", "target_field": "track.is_playable", "ignore_missing": true }},
   {"rename": { "field": "album_uri", "target_field": "album.uri", "ignore_missing": true }},
+  {"rename": { "field": "album_name", "target_field": "album.name", "ignore_missing": true }},
+  {"rename": { "field": "album_type", "target_field": "album.type", "ignore_missing": true }},
+  {"rename": { "field": "album_release_date", "target_field": "album.release_date", "ignore_missing": true }},
   {"rename": { "field": "stream_username", "target_field": "stream_context.username", "ignore_missing": true }},
   {"rename": { "field": "stream_platform", "target_field": "stream_context.platform", "ignore_missing": true }},
+  {"rename": { "field": "stream_normalized_platform", "target_field": "stream_context.normalized_platform", "ignore_missing": true }},
   {"rename": { "field": "stream_conn_country", "target_field": "stream_context.conn_country", "ignore_missing": true }},
   {"rename": { "field": "stream_ip_addr_decrypted", "target_field": "stream_context.ip_addr_decrypted", "ignore_missing": true }},
   {"rename": { "field": "stream_user_agent_decrypted", "target_field": "stream_context.user_agent_decrypted", "ignore_missing": true }},
-  {"rename": { "field": "stream_album_name", "target_field": "album.name", "ignore_missing": true }},
   {"rename": { "field": "stream_reason_start", "target_field": "stream_context.reason_start", "ignore_missing": true }},
   {"rename": { "field": "stream_reason_end", "target_field": "stream_context.reason_end", "ignore_missing": true }},
   {"rename": { "field": "stream_shuffle", "target_field": "stream_context.shuffle", "ignore_missing": true }},
@@ -44,36 +49,18 @@ PUT _ingest/pipeline/spotify-stream-pipeline
   {"rename": { "field": "track_audio_feature_valence", "target_field": "audio_features.valence", "ignore_missing": true }},
   {"rename": { "field": "track_audio_feature_tempo", "target_field": "audio_features.tempo", "ignore_missing": true }},
   {"rename": { "field": "track_audio_feature_time_signature", "target_field": "audio_features.time_signature", "ignore_missing": true }},
-  {"remove": { "field": ["track_src_id", "location"], "ignore_missing": true }},
   {"user_agent": { "field": "stream_context.user_agent_decrypted", "ignore_missing": true }},
-  {
-    "script": {
-      "source": """
-      String platform = ctx['stream_context']['platform'];
-      String lcp = platform.toLowerCase();
-      if (lcp.startsWith('ios') || lcp.startsWith('partner ios_sdk')) {
-          platform = 'iOS';
-      } else if (lcp.startsWith('os x') || lcp.startsWith('osx')) {
-          platform = 'OS X';
-      } else if (lcp.startsWith('partner sonos_')) {
-          platform = 'Sonos';
-      } else if (lcp.startsWith('partner google cast_tv') || lcp.startsWith('partner google cast')) {
-          platform = 'Chromecast';
-      } else if (lcp.startsWith('partner android_tv')) {
-          platform = 'Android TV';
-      } else if (lcp.startsWith('android os') || lcp.startsWith('android [arm 0]')|| lcp.startsWith('android-tablet os')) {
-          platform = 'Android OS';
-      } else if (lcp.startsWith('webplayer') || lcp.startsWith('web_player') || lcp.startsWith('partner spotify web_player')) {
-          platform = 'WebPlayer';
-      } else if (lcp.startsWith('partner webos_tv') || lcp.startsWith('WebOs TV')) {
-          platform = 'WebOs TV';
-      } else if (lcp.startsWith('windows')) {
-          platform = 'Windows';
-      }
-      ctx['stream_context']['normalized_platform'] = platform
-      """
-    }
-  }
+  {"convert": { "field": "stream_context.offline", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "stream_context.shuffle", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "stream_context.incognito_mode", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "stream_context.skipped", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "track.is_in_library", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "track.is_explicit", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "track.is_local", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "track.is_playable", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "is_new_track", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "is_new_artist", "type": "boolean", "ignore_missing": true }},
+  {"convert": { "field": "is_new_album", "type": "boolean", "ignore_missing": true }}
   ]
 }
 ```
@@ -101,7 +88,8 @@ PUT _component_template/spotify-stream-mapping
             "danceability": {"type": "integer"},
             "key": {"type": "integer"},
             "speechiness": {"type": "integer"},
-            "energy": {"type": "integer"}
+            "energy": {"type": "integer"},
+            "time_signature": {"type": "integer"}
           }
         },
         "stream_context": {
@@ -132,7 +120,9 @@ PUT _component_template/spotify-stream-mapping
         "album": {
           "properties": {
             "name": {"type": "keyword"},
-            "uri": {"type": "keyword" }
+            "uri": {"type": "keyword"},
+            "type": {"type": "keyword"},
+            "release_date": {"format": "year||year_month||year_month_day", "type": "date"}
           }
         },
         "track": {
@@ -142,7 +132,9 @@ PUT _component_template/spotify-stream-mapping
             "name": {"type": "keyword"},
             "uri": {"type": "keyword"},
             "is_in_library": {"type": "boolean"},
-            "is_unplayable": {"type": "boolean" }
+            "is_explicit": {"type": "boolean"},
+            "is_local": {"type": "boolean"},
+            "is_playable": {"type": "boolean"}
           }
         },
         "end_time": {"format": "yyyy-MM-dd'T'HH:mm:ss'Z'", "type": "date"},
@@ -150,7 +142,10 @@ PUT _component_template/spotify-stream-mapping
         "day_name": {"type": "keyword"},
         "month_name": {"type": "keyword"},
         "ms_played": {"type": "long"},
-        "min_played": {"type": "long"}
+        "min_played": {"type": "long"},
+        "is_new_track": {"type": "boolean"},
+        "is_new_artist": {"type": "boolean"},
+        "is_new_album": {"type": "boolean"}
       }
     }
   }

@@ -92,7 +92,8 @@ The app will :
 4. Enrich spotify audio features with  `sploty/audio_features.py`
    - The Spotify API is used at this stage, don't forget to [configure it](#spotify)
    - A `json database` ([TinyDB](https://github.com/msiemens/tinydb)) is used at this stage to reduce Spotify API calls by storing tracks data
-5. Index their to elastic with `sploty/to_elastic.py`
+5. Add additional metrics with `sploty/metrics.py` 
+6. Index their to elastic with `sploty/to_elastic.py`
    - Elasticsearch is used at this stage, don't forget to [configure it](#elasticsearch)
 
 #### How to display the help message?
@@ -116,7 +117,7 @@ poetry run python sploty/app.py … --previous-enriched-streaming-history-path y
 Use the `-no-<the part>` options
 
 ```shell
-poetry run python sploty/app.py … --no-concat --no-filter --no-enrich --no-feature --no-elastic
+poetry run python sploty/app.py … --no-concat --no-filter --no-enrich --no-feature --no-metric --no-elastic
 ```
 
 #### How to increase or reduce the number of lines processed at once?

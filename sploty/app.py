@@ -6,7 +6,7 @@ import pydantic_argparse
 from pydantic import Field, HttpUrl, v1
 from pydantic_settings import BaseSettings
 
-from sploty import audio_features, concat, enrich, filter, to_elastic
+from sploty import audio_features, concat, enrich, filter, metrics, to_elastic
 from sploty.settings import logger
 
 
@@ -23,6 +23,7 @@ class Arguments(v1.BaseModel):
     filter: bool = v1.Field(default=True)
     enrich: bool = v1.Field(default=True)
     feature: bool = v1.Field(default=True)
+    metric: bool = v1.Field(default=True)
     elastic: bool = v1.Field(default=True)
 
 
@@ -55,7 +56,8 @@ def main() -> None:
     concated_streaming_history_path = Path(f"{resources_path}/sploty_concated_history.csv")
     to_enrich_streaming_history_path = Path(f"{resources_path}/sploty_filtered_history.csv")
     enriched_streaming_history_path = Path(f"{resources_path}/sploty_enriched_history.csv")
-    featured_streaming_history_path = Path(f"{resources_path}/sploty_featured_history.csv")  # noqa: F841
+    featured_streaming_history_path = Path(f"{resources_path}/sploty_featured_history.csv")
+    metrics_streaming_history_path = Path(f"{resources_path}/sploty_metrics_history.csv")
 
     db_path = args.db_path
     audio_features_db_path = Path(f"{db_path}/tracks.json")
@@ -117,10 +119,16 @@ def main() -> None:
         audio_features.main(
             to_enrich_streaming_history_path,
             enriched_streaming_history_path,
+            featured_streaming_history_path,
             args.chunk_size,
             spotify_api_params,
             db,
         )
+    else:
+        logger.info("skip")
+    logger.info("============== METRICS =============")
+    if args.metric:
+        metrics.main(featured_streaming_history_path, metrics_streaming_history_path)
     else:
         logger.info("skip")
     logger.info("============== ELASTIC =============")
@@ -131,7 +139,7 @@ def main() -> None:
             env.elastic_pass,
             args.elastic_timeout,
         )
-        to_elastic.main(enriched_streaming_history_path, args.index_name, elastic)
+        to_elastic.main(metrics_streaming_history_path, args.index_name, elastic)
     else:
         logger.info("skip")
 
