@@ -111,7 +111,10 @@ def main(to_enrich_path: list, enriched_path: str, chunk_size: int, spotify_api_
 
     # add audio feature to rows that do not have it
     df_enriched_streams = pd.read_csv(enriched_path)
-    df_audio_features = pd.DataFrame(db.all())
+    df_audio_features = pd.DataFrame(db.all()).drop(
+        ["type", "uri", "track_href", "analysis_url", "duration_ms"],
+        axis=1,
+    )
 
     df_completed_streams = completes_streams_with_audio_features(
         df_enriched_streams,

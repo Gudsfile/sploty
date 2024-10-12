@@ -25,29 +25,12 @@ def main(enriched_path: str, index_name: str, elastic):
     # Rename columns
     df_stream = df_stream.rename(
         columns={
-            "end_time": "end_time",
-            "ms_played": "ms_played",
-            "min_played": "min_played",
-            "percentage_played": "percentage_played",
-            "track_uri": "track_uri",
-            "track_name": "track_name",
-            "track_duration_ms": "track_duration_ms",
-            "track_popularity": "track_popularity",
-            "track_is_in_library": "track_is_in_library",
-            "track_is_unplayable": "track_is_unplayable",
-            "artist_uri": "artist_uri",
-            "artist_name": "artist_name",
-            "artist_genres": "artist_genres",
-            "artist_popularity": "artist_popularity",
-            "album_uri": "album_uri",
-            "audio_features": "audio_features",
-            "stream_context": "stream_context",
             "username": "stream_username",
             "platform": "stream_platform",
+            "normalized_platform": "stream_normalized_platform",
             "conn_country": "stream_conn_country",
             "ip_addr_decrypted": "stream_ip_addr_decrypted",
             "user_agent_decrypted": "stream_user_agent_decrypted",
-            "album_name": "stream_album_name",
             "reason_start": "stream_reason_start",
             "reason_end": "stream_reason_end",
             "shuffle": "stream_shuffle",
@@ -55,8 +38,6 @@ def main(enriched_path: str, index_name: str, elastic):
             "offline": "stream_offline",
             "offline_timestamp": "stream_offline_timestamp",
             "incognito_mode": "stream_incognito_mode",
-            "month_name": "month_name",
-            "id": "id",
             "danceability": "track_audio_feature_danceability",
             "energy": "track_audio_feature_energy",
             "key": "track_audio_feature_key",
@@ -71,10 +52,6 @@ def main(enriched_path: str, index_name: str, elastic):
             "time_signature": "track_audio_feature_time_signature",
         },
     )
-
-    df_stream = df_stream.drop(["track_src_id"], axis=1)
-    df_stream = df_stream.drop(["minute", "hour", "day", "month", "year"], axis=1)
-    df_stream = df_stream.drop(["stream_skipped"], axis=1)  # TODO fix error
 
     # Index streams
     logger.info("indexing %i tracks to %s", len(df_stream), index_name)

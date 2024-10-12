@@ -9,7 +9,8 @@ import pandas as pd
 import requests
 from pydantic import BaseModel, HttpUrl
 from requests.exceptions import HTTPError
-from settings import BoldColor
+
+from sploty.settings import BoldColor
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +51,8 @@ def another_get(spotify_api_params: SpotifyApiParams, track_uris):
 
 
 def merger(df1, df5):
-    df1["is_done"] = df1.track_src_id.isin(df5.track_src_id)
-    df = df1.merge(df5, on="track_src_id", how="left")
+    df1["is_done"] = df1.track_uri.isin(df5.track_uri)
+    df = df1.merge(df5, on="track_uri", how="left")
 
     for c_x in df.columns:
         if c_x.endswith("_x"):
@@ -62,48 +63,13 @@ def merger(df1, df5):
 
 
 def saver(df_tableau, complete_data, enriched_path):
-    sorted_cols = [
-        "id",
-        "end_time",
-        "artist_name",
-        "track_name",
-        "ms_played",
-        "min_played",
-        "track_duration_ms",
-        "percentage_played",
-        "track_popularity",
-        # 'in_library',
-        "track_src_id",
-        "artist_uri",
-        "track_uri",
-        "year",
-        "month",
-        "month_name",
-        "day",
-        "hour",
-        "minute",
-        "username",
-        "platform",
-        "conn_country",
-        "ip_addr_decrypted",
-        "user_agent_decrypted",
-        "album_name",
-        "reason_start",
-        "reason_end",
-        "shuffle",
-        "skipped",
-        "offline",
-        "offline_timestamp",
-        "incognito_mode",
-    ]
-
     complete_data = pd.DataFrame.from_dict(complete_data, orient="index")
 
     if len(complete_data) == 0:
         return df_tableau
 
     streams = merger(df_tableau, complete_data)
-    to_write = streams[streams["is_done"] == True][sorted_cols]  # noqa: E712
+    to_write = streams[streams["is_done"] == True]  # noqa: E712
     to_keep = streams[streams["is_done"] == False]  # noqa: E712
     # == to prevent "KeyError: False"
 
@@ -121,8 +87,8 @@ def saver(df_tableau, complete_data, enriched_path):
 def better_enrich(df_tableau, chunk_size, enriched_path, spotify_api_params):
     logger.info("enrich track data for %i tracks", len(df_tableau))
 
-    df = df_tableau[["track_uri", "track_name", "artist_name", "track_src_id", "ms_played"]].drop_duplicates(
-        "track_src_id",
+    df = df_tableau[["track_uri", "track_name", "artist_name", "ms_played"]].drop_duplicates(
+        "track_uri",
     )
     logger.info("reduce enrich for only %i tracks", len(df))
 
@@ -147,17 +113,22 @@ def better_enrich(df_tableau, chunk_size, enriched_path, spotify_api_params):
 
             track = response["tracks"][i]
             artist = track["artists"][0]  # only one artist :(
-            # album = track["album"] #noqa: ERA001
+            album = track["album"]
             track_uri = track["uri"]
 
             logger.debug("enrich track uri n°%i (%s)", index, track_uri)
 
-            stream["artist_uri"] = artist["uri"].split(":")[2]
+            stream["artist_uri"] = artist["id"]
             stream["track_duration_ms"] = (
                 track.get("duration_ms", np.nan) if track.get("duration_ms", None) != 0.0 else np.nan
             )
             stream["track_popularity"] = track.get("popularity", None)
-            stream["percentage_played"] = round((stream.ms_played / stream.track_duration_ms) * 100, 2)
+            stream["track_is_explicit"] = track["explicit"]
+            stream["track_is_local"] = track["is_local"]
+            stream["track_is_playable"] = track["is_playable"]
+            stream["album_uri"] = album["id"]
+            stream["album_type"] = album["album_type"]
+            stream["album_release_date"] = album["release_date"]
             dict_all[index] = stream
         checkpoint += chunk_size
         df_tableau = saver(df_tableau, dict_all, enriched_path)
