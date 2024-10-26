@@ -9,45 +9,33 @@ on:
 permissions:
   contents: read
 
+env:
+  UV_PROJECT_ENVIRONMENT: $PYTHONPATH
+
 jobs:
   build:
-
+    name: python
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: 3.12
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
-    - name: Set up Poetry cache
-      id: cache-poetry
-      uses: actions/cache@v4
-      with:
-        path: /opt/poetry
-        key: ${{ runner.os }}-poetry
-    - name: Install Poetry
-      if: steps.cache-poetry.outputs.cache-hit != 'true'
-      run: |
-        pip install --upgrade pip
-        pip install poetry
-        poetry --version
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
 
-    - name: Set up Poetry dependencies cache
-      uses: actions/cache@v4
-      id: cached-poetry-dependencies
-      with:
-        path: .venv
-        key: ${{ runner.os }}-venv
-    - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: |
-        poetry --version
-        poetry config --local virtualenvs.in-project true
-        poetry install
+      - name: Install the project
+        run: uv sync --all-extras --dev
 
-    - name: Lint with ruff
-      run: |
-        poetry run ruff check --ignore ANN001,ANN201
+      - name: Run linter
+        run: uv run ruff check --ignore ANN001,ANN201
+
+      - name: Minimize uv cache
+        run: uv cache prune --ci

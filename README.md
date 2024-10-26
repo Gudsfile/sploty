@@ -11,17 +11,17 @@
 
 Clone this repository.
 
-Install [Poetry](https://python-poetry.org).
+Install [uv](https://docs.astral.sh/uv/).
 
-Create the virtualenv and install the dependencies with Poetry
+Create the virtualenv and install the dependencies with uv
 
 ```shell
-poetry install
-poetry run python --version
+cd sploty/
+uv sync
 ```
 
-This project uses environment variables such as `spotify_client_id`.
-You can export them or use a `.env` file and poetry with [poetry-dotenv-plugin](https://github.com/mpeteuil/poetry-dotenv-plugin).
+This project uses environment variables such as `SPOTIFY_CLIENT_ID`.
+You should add them to the `.env` file.
 
 Environment variables are specified in the `sample.env` file, copy it and complete it
 
@@ -76,7 +76,17 @@ Timeout and index name could be configured with the Sploty args.
 Run the app
 
 ```shell
-poetry run python sploty/app.py \
+uv run python sploty/app.py \
+  --resources-path your/path/to/the/extended_streaming_history_folder/ \
+  --db-path your/path/to/a/folder/to/save/tracks/data \
+  --index-name your-index-name
+```
+
+You can also reduce the syntax with `uv run sploty` instead of `uv run python sploty/app.py` (thanks to the `[project.scripts]` added to `pyproject.toml` file).
+
+
+```shell
+uv run sploty \
   --resources-path your/path/to/the/extended_streaming_history_folder/ \
   --db-path your/path/to/a/folder/to/save/tracks/data \
   --index-name your-index-name
@@ -101,7 +111,7 @@ The app will :
 Use the `--help` option
 
 ```shell
-poetry run python sploty/app.py --help
+uv run python sploty/app.py --help
 ```
 
 #### How to use a previous `sploty_enriched_history` file?
@@ -109,7 +119,7 @@ poetry run python sploty/app.py --help
 By default, the `sploty_enriched_history` file in the resources folder is used, but you can choose another one with the `--previous-enriched-streaming-history-path` option
 
 ```shell
-poetry run python sploty/app.py … --previous-enriched-streaming-history-path your/path/to/another/sploty_enriched_history.csv
+uv run python sploty/app.py … --previous-enriched-streaming-history-path your/path/to/another/sploty_enriched_history.csv
 ```
 
 #### How to skip a part?
@@ -117,7 +127,7 @@ poetry run python sploty/app.py … --previous-enriched-streaming-history-path y
 Use the `-no-<the part>` options
 
 ```shell
-poetry run python sploty/app.py … --no-concat --no-filter --no-enrich --no-feature --no-metric --no-elastic
+uv run python sploty/app.py … --no-concat --no-filter --no-enrich --no-feature --no-metric --no-elastic
 ```
 
 #### How to increase or reduce the number of lines processed at once?
@@ -125,7 +135,7 @@ poetry run python sploty/app.py … --no-concat --no-filter --no-enrich --no-fea
 Use the `--chunk-size` option, default is 100
 
 ```shell
-poetry run python sploty/app.py … --chunk-size 101
+uv run python sploty/app.py … --chunk-size 101
 ```
 
 ### 👀 Visualize your data
