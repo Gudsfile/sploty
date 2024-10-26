@@ -2,29 +2,33 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pydantic_argparse
-from pydantic import Field, HttpUrl, v1
+from pydantic import Field, HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from sploty import audio_features, concat, enrich, filter, metrics, to_elastic
 from sploty.settings import logger
 
 
-class Arguments(v1.BaseModel):
-    resources_path: str = v1.Field(description="a required string")
-    previous_enriched_streaming_history_path: str = v1.Field(None, description="an optional string")
-    chunk_size: int = v1.Field(default=100, description="an optional int")
-    spotify_timeout: int = v1.Field(default=10, description="an optional int")
-    spotify_sleep: int = v1.Field(default=60, description="an optional int")
-    db_path: str = v1.Field(description="a required string")
-    index_name: str = v1.Field(description="a required string")
-    elastic_timeout: int = v1.Field(default=10, description="an optional int")
-    concat: bool = v1.Field(default=True)
-    filter: bool = v1.Field(default=True)
-    enrich: bool = v1.Field(default=True)
-    feature: bool = v1.Field(default=True)
-    metric: bool = v1.Field(default=True)
-    elastic: bool = v1.Field(default=True)
+class Arguments(BaseSettings, cli_implicit_flags=True, cli_enforce_required=True):
+    model_config = SettingsConfigDict(cli_parse_args=True)
+    resources_path: str = Field(alias="resources-path", description="a required string")
+    previous_enriched_streaming_history_path: str | None = Field(
+        alias="previous-enriched-streaming-history-path",
+        default=None,
+        description="an optional string",
+    )
+    chunk_size: int = Field(alias="chunk-size", default=100, description="an optional int")
+    spotify_timeout: int = Field(alias="spotify-timeout", default=10, description="an optional int")
+    spotify_sleep: int = Field(alias="spotify-sleep", default=60, description="an optional int")
+    db_path: str = Field(alias="db-path", description="a required string")
+    index_name: str = Field(alias="index-name", description="a required string")
+    elastic_timeout: int = Field(alias="elastic-timeout", default=10, description="an optional int")
+    concat: bool = Field(alias="concat", default=True)
+    filter: bool = Field(alias="filter", default=True)
+    enrich: bool = Field(alias="enrich", default=True)
+    feature: bool = Field(alias="feature", default=True)
+    metric: bool = Field(alias="metric", default=True)
+    elastic: bool = Field(alias="elastic", default=True)
 
 
 class Environment(BaseSettings):
@@ -39,15 +43,8 @@ class Environment(BaseSettings):
 
 
 def main() -> None:
-    # Create Parser and Parse Args
-    parser = pydantic_argparse.ArgumentParser(
-        model=Arguments,
-        prog="Example Program",
-        description="Example Description",
-        version="0.0.1",
-        epilog="Example Epilog",
-    )
-    args = parser.parse_typed_args()
+    # Parse args and environment vars
+    args = Arguments()
     env = Environment()
 
     # Paths
