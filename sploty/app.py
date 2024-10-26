@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pydantic_argparse
 from pydantic import Field, HttpUrl, v1
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from sploty import audio_features, concat, enrich, filter, metrics, to_elastic
 from sploty.settings import logger
@@ -28,6 +28,7 @@ class Arguments(v1.BaseModel):
 
 
 class Environment(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
     spotify_client_id: str = Field(description="a required string")
     spotify_client_secret: str = Field(description="a required string")
     spotify_auth_url: HttpUrl = Field(description="a required string")

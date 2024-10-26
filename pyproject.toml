@@ -1,21 +1,23 @@
-[tool.poetry]
+[project]
 name = "sploty"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+description = "Add your description here"
 readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "elasticsearch>=8.15.1",
+    "pandas>=2.2.3",
+    "pydantic-argparse>=0.9.0",
+    "pydantic-settings>=2.6.0",
+    "requests>=2.32.3",
+    "spotipy>=2.24.0",
+    "tinydb>=4.8.2",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-requests = "^2.31.0"
-pandas = "^2.2.2"
-spotipy = "^2.23.0"
-elasticsearch = "^8.13.1"
-tinydb = "^4.8.0"
-pydantic-settings = "^2.5.2"
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.5.5"
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.7.1",
+]
 
 [tool.ruff]
 line-length = 160
@@ -25,5 +27,9 @@ select = ["ALL"]
 ignore = ["D", "TD", "FIX", "PD901"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# uv does not provide a build backend yet
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+sploty = "sploty.app:main"
