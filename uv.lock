@@ -181,18 +181,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pydantic-argparse"
-version = "0.9.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/68/f67377429bb0fb8718dc841beafd3eade66824fc90de87c31a4d5caa2f68/pydantic_argparse-0.9.0.tar.gz", hash = "sha256:01ed0996102301b1269124fd4dd2677d3909e6d930ab86085552c465c8f3aa79", size = 15731 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/fb/ea4f0f4c67e02396035f0706dcb48b2f0168ab6a2e40e98449c2e83a3bbd/pydantic_argparse-0.9.0-py3-none-any.whl", hash = "sha256:d577b3b5e9628e18fea9d37bfbf12dde380fbc6277ac776a30e28106f2c306aa", size = 25913 },
-]
-
-[[package]]
 name = "pydantic-core"
 version = "2.23.4"
 source = { registry = "https://pypi.org/simple" }
@@ -335,7 +323,6 @@ source = { editable = "." }
 dependencies = [
     { name = "elasticsearch" },
     { name = "pandas" },
-    { name = "pydantic-argparse" },
     { name = "pydantic-settings" },
     { name = "requests" },
     { name = "spotipy" },
@@ -351,7 +338,6 @@ dev = [
 requires-dist = [
     { name = "elasticsearch", specifier = ">=8.15.1" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pydantic-argparse", specifier = ">=0.9.0" },
     { name = "pydantic-settings", specifier = ">=2.6.0" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "spotipy", specifier = ">=2.24.0" },
