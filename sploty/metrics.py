@@ -9,9 +9,7 @@ logger = logging.getLogger(__name__)
 
 def normalize_platform(platform: str):
     normalized = {
-        "android os": "Android OS",
-        "android [arm 0]": "Android OS",
-        "android-tablet os": "Android OS",
+        "android": "Android OS",
         "partner android_tv": "Android TV",
         "partner google cast": "Chromecast",
         "ios": "iOS",
@@ -20,7 +18,6 @@ def normalize_platform(platform: str):
         "os x": "MacOS",
         "sonos_": "Sonos",
         "partner sonos": "Sonos",
-        "webos tv": "WebOS TV",
         "partner webos_tv": "WebOS tv",
         "webplayer": "WebPlayer",
         "web_player": "WebPlayer",
