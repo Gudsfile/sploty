@@ -336,12 +336,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "elasticsearch", specifier = ">=8.15.1" },
-    { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pydantic-settings", specifier = ">=2.6.0" },
-    { name = "requests", specifier = ">=2.32.3" },
-    { name = "spotipy", specifier = ">=2.24.0" },
-    { name = "tinydb", specifier = ">=4.8.2" },
+    { name = "elasticsearch", specifier = "==8.15.1" },
+    { name = "pandas", specifier = "==2.2.3" },
+    { name = "pydantic-settings", specifier = "==2.6.0" },
+    { name = "requests", specifier = "==2.32.3" },
+    { name = "spotipy", specifier = "==2.24.0" },
+    { name = "tinydb", specifier = "==4.8.2" },
 ]
 
 [package.metadata.requires-dev]

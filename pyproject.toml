@@ -5,18 +5,16 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "elasticsearch>=8.15.1",
-    "pandas>=2.2.3",
-    "pydantic-settings>=2.6.0",
-    "requests>=2.32.3",
-    "spotipy>=2.24.0",
-    "tinydb>=4.8.2",
+    "elasticsearch==8.15.1",
+    "pandas==2.2.3",
+    "pydantic-settings==2.6.0",
+    "requests==2.32.3",
+    "spotipy==2.24.0",
+    "tinydb==4.8.2",
 ]
 
 [dependency-groups]
-dev = [
-    "ruff>=0.8.0",
-]
+dev = ["ruff>=0.8.0"]
 
 [tool.ruff]
 line-length = 160
