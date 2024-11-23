@@ -13,9 +13,9 @@ dependencies = [
     "tinydb>=4.8.2",
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "ruff>=0.7.1",
+[dependency-groups]
+dev = [
+    "ruff>=0.8.0",
 ]
 
 [tool.ruff]
