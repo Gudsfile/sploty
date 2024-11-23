@@ -2,9 +2,9 @@ name: Python application
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -35,7 +35,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run linter
-        run: uv run ruff check --ignore ANN001,ANN201
+        run: uv run ruff check --ignore ANN001,ANN201,A004
 
       - name: Minimize uv cache
         run: uv cache prune --ci
